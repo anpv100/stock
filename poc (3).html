@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>StockFlow Pro · Smart Inventory + Labels</title>
+  <!-- SheetJS + jsPDF + autoTable + HTML5 QR Scanner + JsBarcode -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background: linear-gradient(145deg, #eef2fa 0%, #e0e8f0 100%);
+      padding: 0.75rem;
+      min-height: 100vh;
+      font-size: 0.8rem;
+    }
+    .app-container {
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+    .flex-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #0b2b3b, #1b5a7a);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      letter-spacing: -0.2px;
+    }
+    .stats-badge {
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(4px);
+      padding: 0.25rem 1rem;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #1f4e6e;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid rgba(31,110,140,0.2);
+      padding-bottom: 0.3rem;
+    }
+    .tab-btn {
+      background: transparent;
+      padding: 0.4rem 1.2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 60px;
+      color: #3b6f8c;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #1f6e8c;
+      color: white;
+      box-shadow: 0 4px 10px rgba(31,110,140,0.2);
+    }
+    .panel {
+      display: none;
+      animation: fade 0.2s ease;
+    }
+    .panel.active-panel {
+      display: block;
+    }
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(4px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    .glass-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 6px 16px -6px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .form-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: flex-end;
+    }
+    .input-field {
+      flex: 1;
+      min-width: 110px;
+    }
+    .input-field label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #2c6e8f;
+      letter-spacing: 0.3px;
+      margin-bottom: 0.2rem;
+      display: block;
+    }
+    .input-field input {
+      width: 100%;
+      padding: 0.5rem 0.8rem;
+      border-radius: 28px;
+      border: 1.5px solid #e2edf2;
+      background: #fefefe;
+      font-size: 0.8rem;
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.2rem;
+    }
+    button {
+      border: none;
+      padding: 0.45rem 1rem;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.7rem;
+      cursor: pointer;
+      background: #eef2f6;
+      color: #1f3b4c;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s;
+    }
+    button.primary { background: #1f6e8c; color: white; box-shadow: 0 2px 6px rgba(31,110,140,0.2); }
+    button.danger { background: #ffe2e0; color: #bc4e4e; }
+    button.warning { background: #fff0db; color: #b45f1b; }
+    button.scan-btn { background: #2c6e8f; color: white; }
+    .search-box {
+      position: relative;
+      flex: 2;
+      min-width: 180px;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 0.45rem 1rem 0.45rem 2rem;
+      border-radius: 40px;
+      border: 1px solid #d4e2ec;
+      font-size: 0.75rem;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 1rem;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.7rem;
+    }
+    th {
+      background: #f4f9fe;
+      padding: 0.55rem 0.7rem;
+      text-align: left;
+      color: #1f4e6e;
+      font-weight: 700;
+      font-size: 0.7rem;
+    }
+    td {
+      padding: 0.5rem 0.7rem;
+      border-bottom: 1px solid #ecf3f8;
+      vertical-align: middle;
+      font-size: 0.7rem;
+      line-height: 1.3;
+    }
+    .expiryiring-row { background-color: #ffe6e3 !important; }
+    .expiryiring-badge {
+      background: #ffc2b3;
+      color: #a12a1a;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.6rem;
+      border-radius: 30px;
+      display: inline-block;
+    }
+    .zero-qty-badge {
+      background: #e9ecef;
+      color: #6c757d;
+      font-size: 0.65rem;
+      border-radius: 20px;
+      padding: 0.15rem 0.5rem;
+    }
+    .analysis-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 0.7rem 1rem;
+      flex: 1;
+      min-width: 110px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+      border: 1px solid #eef2ff;
+    }
+    .stat-number {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #1f6e8c;
+    }
+    .toast-msg {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f3b4c;
+      color: white;
+      padding: 6px 18px;
+      border-radius: 60px;
+      font-size: 0.7rem;
+      z-index: 2000;
+      opacity: 0;
+      transition: 0.2s;
+      pointer-events: none;
+      font-weight: 500;
+    }
+    .scanner-area {
+      margin-top: 1rem;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: #1e2a32;
+      transition: 0.2s;
+    }
+    .scanner-container {
+      position: relative;
+      max-width: 360px;
+      width: 100%;
+      margin: 0 auto;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: #000;
+    }
+    .scanner-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f2c38;
+      padding: 0.4rem 0.8rem;
+      border-radius: 1rem 1rem 0 0;
+    }
+    .scanner-header span {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: white;
+    }
+    .close-scanner {
+      background: #bc4e4e;
+      color: white;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.65rem;
+    }
+    .hidden {
+      display: none;
+    }
+    /* ---------- new styles for sort & labels ---------- */
+    .sort-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+    .sort-bar select {
+      padding: 0.4rem 1rem;
+      border-radius: 40px;
+      border: 1px solid #d4e2ec;
+      font-size: 0.7rem;
+      background: white;
+      color: #1f4e6e;
+    }
+    .label-preview {
+      background: #f8fcff;
+      border: 1px solid #d4e8f3;
+      padding: 1rem;
+      border-radius: 1rem;
+      max-width: 420px;
+      margin-top: 1rem;
+    }
+    .label-preview h4 {
+      margin-bottom: 0.5rem;
+      font-size: 0.8rem;
+      color: #1f6e8c;
+    }
+    .batch-actions {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 2px dashed #cde3ef;
+    }
+    .label-btn {
+      background: #e2ecf2;
+      color: #1f3b4c;
+      margin-left: 4px;
+    }
+    @media (max-width: 700px) {
+      body { padding: 0.5rem; }
+      .glass-card { padding: 0.8rem; }
+      button { padding: 0.4rem 0.8rem; font-size: 0.65rem; }
+      th, td { padding: 0.4rem 0.5rem; }
+      .stat-card { padding: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div class="flex-header">
+    <center><h1>📦 Stock Counter + Labels</h1></center>
+    <div class="stats-badge">
+      <span>Items: <strong id="totalItemsStat">0</strong></span>
+      <span>Total Qty: <strong id="totalQtyStat">0</strong></span>
+      <span>💰 Total Value: <strong id="totalValueStat">$0.00</strong></span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="entry">1 · ENTRY + SCAN</button>
+    <button class="tab-btn" data-tab="data">2 · DATA</button>
+    <button class="tab-btn" data-tab="analysis">3 · ANALYSIS</button>
+    <button class="tab-btn" data-tab="labels">4 · LABELS</button>
+  </div>
+
+  <!-- ENTRY PANEL (original) -->
+  <div id="entryPanel" class="panel active-panel">
+    <div class="glass-card">
+      <h3 style="margin-bottom: 0.7rem; font-size: 0.9rem; color:#1f6e8c;">Add / Edit Stock (Price + Barcode Scanner)</h3>
+      <div class="form-grid">
+        <div class="input-field" style="min-width: 70px;"><label># (auto)</label><input type="text" id="itemNumberDisplay" disabled placeholder="Auto"></div>
+        <div class="input-field"><label>NAME *</label><input type="text" id="productName" placeholder="Product name"></div>
+        <div class="input-field"><label>BARCODE</label><input type="text" id="barcode" placeholder="Optional / Scan"></div>
+        <div class="input-field"><label>QTY (0 allowed)</label><input type="number" id="productQty" min="0" value="1" step="1"></div>
+        <div class="input-field"><label>PRICE ($)</label><input type="number" id="productPrice" min="0" step="0.01" value="0.00" placeholder="0.00"></div>
+        <div class="input-field"><label>EXPIRY (DD/MM/YY)</label><input type="text" id="expiryDate" placeholder="DD/MM/YY"></div>
+        <div class="btn-row">
+          <button id="addUpdateBtn" class="primary">Add / Update</button>
+          <button id="cancelEditBtn" class="warning">Cancel</button>
+        </div>
+      </div>
+      <div style="margin-top: 0.8rem; display: flex; align-items: center; gap: 10px;">
+        <button id="startScanBtn" class="scan-btn">📷 Scan Barcode (Camera)</button>
+      </div>
+      <div id="scannerWrapper" class="scanner-area hidden">
+        <div class="scanner-header">
+          <span>🔍 Point camera at barcode</span>
+          <button id="closeScannerBtn" class="close-scanner">✕ Close</button>
+        </div>
+        <div id="qr-reader" style="width:100%; max-width:360px; margin:0 auto; min-height: 260px;"></div>
+        <div style="text-align:center; font-size:0.6rem; padding:4px; background:#eef2fa;">rectangle preview — auto closes on scan</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA PANEL (with sorting & label button on each row) -->
+  <div id="dataPanel" class="panel">
+    <div class="glass-card">
+      <div class="sort-bar" style="justify-content: space-between;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div class="search-box"><input type="text" id="searchInputData" placeholder="Search by name or barcode..."></div>
+          <select id="sortBySelect">
+            <option value="default">Sort by: #</option>
+            <option value="name_asc">Name A-Z</option>
+            <option value="price_asc">Price (low→high)</option>
+            <option value="price_desc">Price (high→low)</option>
+            <option value="qty_desc">Quantity (high→low)</option>
+            <option value="expiry_asc">Expiry (soon first)</option>
+          </select>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <button id="deleteAllBtn" class="danger">Delete All</button>
+          <button id="saveDataBtn" class="primary" style="background:#2b5e3b;">Save Data</button>
+          <button id="importExcelBtn" style="background:#2b5e3b; color:white;">Import Excel</button>
+          <button id="exportExcelBtn" style="background:#1a5d4b; color:white;">Export Excel</button>
+          <button id="exportPdfBtn" style="background:#9c2e3f; color:white;">Export PDF</button>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table id="stockTable">
+          <thead>
+            <tr><th>#</th><th>Product Name</th><th>Barcode</th><th>Qty</th><th>Price ($)</th><th>Expiry</th><th>Status</th><th>Actions</th>
+          </thead>
+          <tbody id="tableBody"><tr><td colspan="8">Loading......</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSIS PANEL (original) -->
+  <div id="analysisPanel" class="panel">
+    <div class="glass-card">
+      <h3 style="margin-bottom: 0.8rem; font-size: 0.95rem;">Stock Analytics + Financial</h3>
+      <div class="analysis-stats">
+        <div class="stat-card"><div class="stat-number" id="analTotalItems">0</div><div>Total Items</div></div>
+        <div class="stat-card"><div class="stat-number" id="analTotalQty">0</div><div>Total Quantity</div></div>
+        <div class="stat-card"><div class="stat-number" id="analTotalValue">$0</div><div>Inventory Value</div></div>
+        <div class="stat-card"><div class="stat-number" id="analExpiryiringCount">0</div><div>Expiring ≤ 2m</div></div>
+        <div class="stat-card"><div class="stat-number" id="analZeroQtyCount">0</div><div>Zero Stock</div></div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem;">
+        <div style="flex:1; background:#fef7e0; border-radius: 1.2rem; padding: 0.8rem;">
+          <h4 style="font-size:0.8rem; margin-bottom:0.5rem;">⚠️ Expiring Soon (≤ 60 days)</h4>
+          <ul id="expiryiringList" style="margin-top: 0.3rem; list-style: none; font-size:0.7rem;"></ul>
+        </div>
+        <div style="flex:1; background:#f0f2f5; border-radius: 1.2rem; padding: 0.8rem;">
+          <h4 style="font-size:0.8rem; margin-bottom:0.5rem;">📉 Zero Stock Items</h4>
+          <ul id="zeroStockList" style="margin-top: 0.3rem; list-style: none; font-size:0.7rem;"></ul>
+        </div>
+      </div>
+      <button id="refreshAnalysisBtn" class="primary" style="margin-top: 0.8rem;">Refresh Analysis</button>
+    </div>
+  </div>
+
+  <!-- LABELS PANEL (new) -->
+  <div id="labelsPanel" class="panel">
+    <div class="glass-card">
+      <h3>🏷️ Single Label Creator</h3>
+      <div class="form-grid">
+        <div class="input-field"><label>Product Name</label><input type="text" id="labelProductName" list="labelNameList"><datalist id="labelNameList"></datalist></div>
+        <div class="input-field"><label>Barcode</label><input type="text" id="labelBarcode"></div>
+        <div class="input-field"><label>Price ($)</label><input type="number" id="labelPrice" step="0.01" value="0.00"></div>
+        <div class="input-field"><label>Copies</label><input type="number" id="labelCount" min="1" value="1" max="30"></div>
+        <div class="btn-row">
+          <button id="generateLabelBtn" class="primary">Preview</button>
+          <button id="printLabelBtn" class="primary">🖨️ Print Labels</button>
+          <button id="downloadPdfLabelBtn" class="primary">📄 PDF (Single)</button>
+          <button id="resetLabelBtn">Reset</button>
+        </div>
+      </div>
+      <div id="labelPreview" class="label-preview hidden">
+        <div class="label-frame">
+          <h4>Preview (scannable barcode)</h4>
+          <div><strong id="previewName"></strong></div>
+          <div><span id="previewPrice"></span>   <span id="previewBarcodeText"></span></div>
+          <svg id="labelBarcodeSvg" width="100%" height="70"></svg>
+        </div>
+      </div>
+      <div class="batch-actions">
+        <h3>📦 Batch Labels from Inventory (5 labels per row)</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin:0.8rem 0;">
+          <button id="batchPdfAllBtn" class="primary" style="background:#1f6e8c;">📑 PDF for ALL Items (5/row)</button>
+          <button id="batchPrintAllBtn" class="primary" style="background:#2b5e3b;">🖨️ PRINT All Items (5/row)</button>
+        </div>
+        <p style="font-size:0.7rem; background:#f0f6fa; padding:0.4rem; border-radius:20px;">✅ Each label: name, price, barcode image — arranged 5 per line on A4, ready to cut.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toastMsg" class="toast-msg">Ready</div>
+
+<script>
+  // ========== STORAGE & GLOBALS (original + sort) ==========
+  const STORAGE_KEY = "stockflow_pro_data_v2";
+  let stockItems = [];
+  let editMode = false;
+  let editingId = null;
+  let currentSearch = "";
+  let currentSort = "default";   // NEW: sort variable
+  let html5QrCode = null;
+  let scannerActive = false;
+  let selectedCameraId = null;
+
+  // ========== SOUND (original) ==========
+  let audioCtx = null;
+  function initAudio() { if (!audioCtx && window.AudioContext) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+  function playBeep(type = "click") {
+    if (!audioCtx) initAudio();
+    if (!audioCtx) return;
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    try {
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = type === "error" ? 520 : 880;
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+      osc.start();
+      osc.stop(now + 0.2);
+    } catch(e) {}
+  }
+  function playSound(action) { if (action === "error") playBeep("error"); else playBeep("click"); }
+
+  // ========== DATE HELPERS (original) ==========
+  function formatDisplayDate(isoDate) {
+    if (!isoDate) return "—";
+    const parts = isoDate.split("-");
+    if (parts.length !== 3) return isoDate;
+    const day = parts[2];
+    const month = parts[1];
+    const yearShort = parts[0].slice(-2);
+    return `${day}/${month}/${yearShort}`;
+  }
+  function parseToInternalDate(dateStr) {
+    if (!dateStr || dateStr.trim() === "") return null;
+    let trimmed = dateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    let parts = trimmed.split("/");
+    if (parts.length === 3) {
+      let day = parts[0].padStart(2,'0');
+      let month = parts[1].padStart(2,'0');
+      let year = parts[2];
+      if (year.length === 2) year = "20" + year;
+      if (year.length === 4) {
+        let date = new Date(`${year}-${month}-${day}`);
+        if (!isNaN(date.getTime())) return `${year}-${month}-${day}`;
+      }
+    }
+    let d = new Date(trimmed);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+    return null;
+  }
+  function isExpiryiringSoon(isoDate) {
+    if (!isoDate) return false;
+    const expiry = new Date(isoDate);
+    if (isNaN(expiry.getTime())) return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diffDays = Math.floor((expiry - today) / (86400000));
+    return diffDays <= 60 && diffDays >= 0;
+  }
+
+  // ========== CORE DATA FUNCTIONS (original, now with sort) ==========
+  function reorderNumbers() { for (let i=0; i<stockItems.length; i++) stockItems[i].displayNumber = i+1; }
+  function getNextNum() { return stockItems.length ? Math.max(...stockItems.map(i=>i.displayNumber)) + 1 : 1; }
+  function calcTotalValue() {
+    return stockItems.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
+  }
+  function updateGlobalStats() {
+    document.getElementById("totalItemsStat").innerText = stockItems.length;
+    const totalQ = stockItems.reduce((s,i)=> s + (Number(i.quantity)||0),0);
+    document.getElementById("totalQtyStat").innerText = totalQ;
+    const totalVal = calcTotalValue();
+    document.getElementById("totalValueStat").innerText = `$${totalVal.toFixed(2)}`;
+  }
+  function persist() {
+    const toStore = stockItems.map(({id, displayNumber, name, barcode, quantity, expiryDate, price}) => 
+      ({id, displayNumber, name, barcode, quantity, expiryDate, price: price !== undefined ? price : null}));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    updateGlobalStats();
+    if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
+  }
+  function showToast(msg, isError = false) {
+    const toast = document.getElementById("toastMsg");
+    toast.textContent = msg;
+    toast.style.backgroundColor = isError ? "#bc4e4e" : "#1f6e8c";
+    toast.style.opacity = "1";
+    setTimeout(() => toast.style.opacity = "0", 2500);
+    if (isError) playSound("error"); else playSound("click");
+  }
+  function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+
+  // NEW: get filtered & sorted array
+  function getFilteredSorted() {
+    let filtered = stockItems.filter(i => !currentSearch || i.name.toLowerCase().includes(currentSearch) || (i.barcode && i.barcode.toLowerCase().includes(currentSearch)));
+    if (currentSort === "name_asc") filtered.sort((a,b) => a.name.localeCompare(b.name));
+    else if (currentSort === "price_asc") filtered.sort((a,b) => (a.price||0) - (b.price||0));
+    else if (currentSort === "price_desc") filtered.sort((a,b) => (b.price||0) - (a.price||0));
+    else if (currentSort === "qty_desc") filtered.sort((a,b) => (b.quantity||0) - (a.quantity||0));
+    else if (currentSort === "expiry_asc") filtered.sort((a,b) => (a.expiryDate||"9999-12-31").localeCompare(b.expiryDate||"9999-12-31"));
+    else filtered.sort((a,b) => (a.displayNumber||0) - (b.displayNumber||0));
+    return filtered;
+  }
+
+  function renderDataTable() {
+    const tbody = document.getElementById("tableBody");
+    const filtered = getFilteredSorted();
+    if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="8">No items match. Add products</td></tr>`; persist(); return; }
+    let html = "";
+    filtered.forEach(item => {
+      const expiryiring = isExpiryiringSoon(item.expiryDate);
+      const rowClass = expiryiring ? "expiryiring-row" : "";
+      const expiryDisplay = formatDisplayDate(item.expiryDate);
+      let statusBadge = "";
+      if (expiryiring) statusBadge = `<span class="expiryiring-badge">exp</span>`;
+      else if (item.quantity === 0) statusBadge = `<span class="zero-qty-badge">No stock</span>`;
+      else statusBadge = "✓";
+      const priceValue = (item.price && !isNaN(item.price)) ? parseFloat(item.price).toFixed(2) : "0.00";
+      html += `<tr class="${rowClass}" data-id="${item.id}">
+        <td>${item.displayNumber}</td>
+        <td>${escapeHtml(item.name)}</td>
+        <td><span style="font-family:monospace;">${item.barcode ? escapeHtml(item.barcode) : "—"}</span></td>
+        <td>${Number(item.quantity)}</td>
+        <td>$${priceValue}</td>
+        <td>${expiryDisplay}</td>
+        <td>${statusBadge}</td>
+        <td class="action-cell">
+          <button class="edit-btn" data-id="${item.id}">Edit</button>
+          <button class="delete-btn danger" data-id="${item.id}">Del</button>
+          <button class="label-btn" data-id="${item.id}">🏷️ Label</button>
+        </td>
+       </tr>`;
+    });
+    tbody.innerHTML = html;
+    populateLabelNameList();
+    persist();
+  }
+
+  function resetForm() {
+    document.getElementById("productName").value = "";
+    document.getElementById("barcode").value = "";
+    document.getElementById("productQty").value = "1";
+    document.getElementById("productPrice").value = "0.00";
+    document.getElementById("expiryDate").value = "";
+    document.getElementById("itemNumberDisplay").value = "";
+    editMode = false;
+    editingId = null;
+    document.getElementById("addUpdateBtn").innerHTML = "Add / Update";
+  }
+  function addOrUpdateItem() {
+    let name = document.getElementById("productName").value.trim();
+    let barcode = document.getElementById("barcode").value.trim() || null;
+    let quantity = parseInt(document.getElementById("productQty").value);
+    let price = parseFloat(document.getElementById("productPrice").value);
+    let expiryInput = document.getElementById("expiryDate").value.trim();
+    if (!name) { showToast("Name required", true); return; }
+    if (isNaN(quantity)) quantity = 0;
+    if (quantity < 0) quantity = 0;
+    if (isNaN(price) || price < 0) price = 0;
+    let internalExpiry = expiryInput ? parseToInternalDate(expiryInput) : null;
+    if (expiryInput && !internalExpiry) { showToast("Invalid date (use DD/MM/YY)", true); return; }
+    if (editMode && editingId !== null) {
+      const idx = stockItems.findIndex(i => i.id === editingId);
+      if (idx !== -1) {
+        stockItems[idx] = { ...stockItems[idx], name, barcode: barcode || null, quantity, price, expiryDate: internalExpiry };
+        showToast("Item updated");
+        resetForm();
+        renderDataTable();
+        if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
+        return;
+      }
+    } else {
+      const newId = Date.now() + Math.floor(Math.random() * 10000);
+      const newNum = getNextNum();
+      stockItems.push({ id: newId, displayNumber: newNum, name, barcode: barcode || null, quantity, price: price, expiryDate: internalExpiry });
+      showToast("Item added");
+      resetForm();
+      renderDataTable();
+      if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
+    }
+  }
+  function deleteItemById(id) {
+    if (confirm("Delete this item?")) {
+      stockItems = stockItems.filter(i => i.id !== id);
+      reorderNumbers();
+      if (editMode && editingId === id) resetForm();
+      renderDataTable();
+      showToast("Deleted");
+      if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
+    }
+  }
+  function deleteAllItems() {
+    if (stockItems.length === 0) return showToast("Nothing to delete", true);
+    if (confirm("DELETE ALL ITEMS?")) {
+      stockItems = [];
+      resetForm();
+      renderDataTable();
+      showToast("All items cleared");
+      if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
+    }
+  }
+  function startEdit(id) {
+    const item = stockItems.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById("itemNumberDisplay").value = item.displayNumber;
+    document.getElementById("productName").value = item.name;
+    document.getElementById("barcode").value = item.barcode || "";
+    document.getElementById("productQty").value = item.quantity;
+    document.getElementById("productPrice").value = (item.price !== undefined && item.price !== null) ? item.price : 0;
+    document.getElementById("expiryDate").value = item.expiryDate ? formatDisplayDate(item.expiryDate) : "";
+    editMode = true;
+    editingId = item.id;
+    document.getElementById("addUpdateBtn").innerHTML = "Update Stock";
+    document.querySelector('[data-tab="entry"]').click();
+    showToast("Edit mode active");
+  }
+
+  // ========== BARCODE SCANNER (original) ==========
+  async function stopScanner() {
+    if (html5QrCode && scannerActive) {
+      try { await html5QrCode.stop(); } catch(e) {}
+      scannerActive = false;
+    }
+    document.getElementById("scannerWrapper").classList.add("hidden");
+    if (html5QrCode) { try { html5QrCode.clear(); } catch(e) {} html5QrCode = null; }
+  }
+
+  async function requestCameraPermission() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showToast("Camera access is not supported in this browser.", true);
+      return false;
+    }
+    if (!window.isSecureContext && window.location.protocol !== "http:" && window.location.protocol !== "https:") {
+      showToast("Camera requires HTTPS or localhost. Open via a secure page and try again.", true);
+      return false;
+    }
+    showToast("Requesting camera permission...", false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (err) {
+      console.warn("Camera permission denied or unavailable", err);
+      showToast("Camera access denied. Allow permission and try again.", true);
+      return false;
+    }
+  }
+
+  async function startScanner() {
+    const allowed = await requestCameraPermission();
+    if (!allowed) return;
+    await stopScanner();
+    const wrapper = document.getElementById("scannerWrapper");
+    wrapper.classList.remove("hidden");
+    const readerDiv = document.getElementById("qr-reader");
+    readerDiv.innerHTML = "";
+    if (!window.Html5Qrcode) { showToast("QR scanner library not loaded.", true); wrapper.classList.add("hidden"); return; }
+    html5QrCode = new Html5Qrcode("qr-reader");
+    const config = { fps: 10, qrbox: { width: 250, height: 200 } };
+    try {
+      const cameras = await Html5Qrcode.getCameras();
+      let cameraId = null;
+      if (cameras && cameras.length) {
+        const backCam = cameras.find(cam => cam.label.toLowerCase().includes('back') || cam.label.toLowerCase().includes('rear'));
+        cameraId = backCam ? backCam.id : cameras[0].id;
+      }
+      scannerActive = true;
+      await html5QrCode.start(
+        cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          document.getElementById("barcode").value = decodedText;
+          showToast(`✅ Scanned: ${decodedText}`);
+          stopScanner();
+          playSound("click");
+        },
+        (errMsg) => { /* ignore */ }
+      );
+    } catch (err) {
+      console.error(err);
+      showToast("Camera error: " + (err.message || ""), true);
+      wrapper.classList.add("hidden");
+      scannerActive = false;
+    }
+  }
+
+  // ========== ANALYSIS (original) ==========
+  function renderAnalysisPanel() {
+    const totalItems = stockItems.length;
+    const totalQty = stockItems.reduce((s,i)=> s + (Number(i.quantity)||0),0);
+    const totalValue = calcTotalValue();
+    const expiryiringItems = stockItems.filter(i => isExpiryiringSoon(i.expiryDate));
+    const zeroQtyItems = stockItems.filter(i => (Number(i.quantity) === 0));
+    document.getElementById("analTotalItems").innerText = totalItems;
+    document.getElementById("analTotalQty").innerText = totalQty;
+    document.getElementById("analTotalValue").innerHTML = `$${totalValue.toFixed(2)}`;
+    document.getElementById("analExpiryiringCount").innerText = expiryiringItems.length;
+    document.getElementById("analZeroQtyCount").innerText = zeroQtyItems.length;
+    const expiryiringUl = document.getElementById("expiryiringList");
+    expiryiringUl.innerHTML = expiryiringItems.length ? expiryiringItems.map(i => `<li style="margin-bottom: 5px;"><strong>${escapeHtml(i.name)}</strong> (expiry: ${formatDisplayDate(i.expiryDate)}) qty:${i.quantity}</li>`).join('') : "<li>No items expiring soon.</li>";
+    const zeroUl = document.getElementById("zeroStockList");
+    zeroUl.innerHTML = zeroQtyItems.length ? zeroQtyItems.map(i => `<li style="margin-bottom: 5px;">${escapeHtml(i.name)} — barcode: ${i.barcode || "—"} (qty 0)</li>`).join('') : "<li>No zero‑stock items.</li>";
+  }
+
+  // ========== EXCEL IMPORT / EXPORT (original) ==========
+  function parseAnyDateToInternal(value) {
+    if (!value || value === "") return null;
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
+    if (typeof value === 'number') {
+      const utc_days = value - 25569;
+      const date = new Date(utc_days * 86400000);
+      if (!isNaN(date.getTime())) return date.toISOString().slice(0,10);
+      return null;
+    }
+    if (typeof value === 'string') {
+      let trimmed = value.trim();
+      let parts = trimmed.split("/");
+      if (parts.length === 3) {
+        let day = parts[0].padStart(2,'0');
+        let month = parts[1].padStart(2,'0');
+        let year = parts[2];
+        if (year.length === 2) year = "20" + year;
+        if (year.length === 4) {
+          let testDate = new Date(`${year}-${month}-${day}`);
+          if (!isNaN(testDate.getTime())) return `${year}-${month}-${day}`;
+        }
+      }
+      let d = new Date(trimmed);
+      if (!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+    }
+    return null;
+  }
+  function importExcelFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+      if (!rows.length) { showToast("Empty file", true); return; }
+      let headerRowIndex = -1, headerRow = null;
+      for (let i = 0; i < Math.min(rows.length, 20); i++) {
+        const row = rows[i];
+        if (!row) continue;
+        const rowStr = row.map(c => String(c || "").toLowerCase()).join(" ");
+        if (rowStr.includes("name") && (rowStr.includes("qty") || rowStr.includes("quantity"))) {
+          headerRowIndex = i;
+          headerRow = row;
+          break;
+        }
+      }
+      if (headerRowIndex === -1) { showToast("Header row (Name, Qty) missing", true); return; }
+      const headers = headerRow.map(c => String(c || "").toLowerCase().trim());
+      const nameIdx = headers.findIndex(h => h.includes("name"));
+      const qtyIdx = headers.findIndex(h => h.includes("qty") || h.includes("quantity"));
+      const expiryIdx = headers.findIndex(h => h.includes("expiry") || h.includes("expiry date"));
+      const barcodeIdx = headers.findIndex(h => h.includes("barcode"));
+      const priceIdx = headers.findIndex(h => h.includes("price") || h === "price" || h.includes("unit price"));
+      if (nameIdx === -1 || qtyIdx === -1) { showToast("Missing 'Name' or 'Qty' column", true); return; }
+      let maxNum = stockItems.length ? Math.max(...stockItems.map(i=>i.displayNumber), 0) : 0;
+      let newItems = [];
+      for (let i = headerRowIndex + 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.every(c => !c || String(c).trim() === "")) continue;
+        let name = row[nameIdx] ? String(row[nameIdx]).trim() : "";
+        if (!name) continue;
+        let qty = parseInt(row[qtyIdx]);
+        if (isNaN(qty) || qty < 0) qty = 0;
+        let barcode = (barcodeIdx !== -1 && row[barcodeIdx]) ? String(row[barcodeIdx]).trim() : null;
+        let price = 0;
+        if (priceIdx !== -1 && row[priceIdx] !== undefined && row[priceIdx] !== "") {
+          let p = parseFloat(String(row[priceIdx]).replace(/[^0-9.-]/g, ''));
+          price = isNaN(p) ? 0 : p;
+        }
+        let expiryVal = null;
+        if (expiryIdx !== -1 && row[expiryIdx]) expiryVal = parseAnyDateToInternal(row[expiryIdx]);
+        maxNum++;
+        newItems.push({
+          id: Date.now() + i + Math.floor(Math.random() * 10000),
+          displayNumber: maxNum,
+          name: name,
+          barcode: barcode,
+          quantity: qty,
+          price: price,
+          expiryDate: expiryVal
+        });
+      }
+      if (newItems.length === 0) { showToast("No valid rows", true); return; }
+      stockItems.push(...newItems);
+      reorderNumbers();
+      renderDataTable();
+      if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
+      showToast(`Imported ${newItems.length} items (price column included)`, false);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  function triggerImport() { let inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls'; inp.onchange=e=>{ if(inp.files[0]) importExcelFile(inp.files[0]); }; inp.click(); }
+  function exportExcelWithAlert() {
+    if (!stockItems.length) { showToast("No data", true); return; }
+    const wsData = [["#", "Product Name", "Barcode", "Qty", "Price ($)", "Expiry (DD/MM/YY)", "Status"]];
+    for (let item of stockItems) {
+      const expiring = isExpiryiringSoon(item.expiryDate);
+      const status = expiring ? "EXPIRING" : (item.quantity === 0 ? "ZERO STOCK" : "OK");
+      wsData.push([
+        item.displayNumber, item.name, item.barcode || "", item.quantity,
+        (item.price ? parseFloat(item.price).toFixed(2) : "0.00"),
+        formatDisplayDate(item.expiryDate), status
+      ]);
+    }
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{wch:5},{wch:22},{wch:15},{wch:8},{wch:10},{wch:18},{wch:12}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+    XLSX.writeFile(wb, `inventory_${Date.now()}.xlsx`);
+    showToast("Excel exported with Price");
+  }
+  async function exportPdfWithAlert() {
+    if (!stockItems.length) { showToast("No data", true); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const headers = [["#", "Product Name", "Barcode", "Quantity", "Price ($)", "Expiry", "Status"]];
+    const body = stockItems.map(i => [
+      i.displayNumber, i.name, i.barcode || "", i.quantity,
+      (i.price ? parseFloat(i.price).toFixed(2) : "0.00"),
+      formatDisplayDate(i.expiryDate),
+      isExpiryiringSoon(i.expiryDate) ? "exp" : (i.quantity === 0 ? "No stock" : "ok")
+    ]);
+    const rowStyles = {};
+    stockItems.forEach((it, idx) => { if (isExpiryiringSoon(it.expiryDate)) rowStyles[idx] = { fillColor: [255, 204, 204] }; });
+    doc.autoTable({ head: headers, body: body, startY: 28, headStyles: { fillColor: [44,125,160], textColor: 255 }, rowStyles: rowStyles, margin: { left: 10, right: 10 } });
+    doc.save(`stock_report_${Date.now()}.pdf`);
+    showToast("PDF exported with price column");
+  }
+
+  // ========== LOAD INITIAL DATA (original) ==========
+  function loadInitial() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        let parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length) {
+          stockItems = parsed.map(p => ({ ...p, quantity: p.quantity ?? 0, price: (p.price !== undefined) ? p.price : null }));
+          reorderNumbers();
+          renderDataTable();
+          showToast(`Loaded ${stockItems.length} items`);
+          return;
+        }
+      } catch(e) {}
+    }
+    const demo = [
+      { id:1001, displayNumber:1, name:"Organic Milk", barcode:"890123", quantity:5, price:3.49, expiryDate:"2025-06-15" },
+      { id:1002, displayNumber:2, name:"Sourdough", barcode:"400638", quantity:0, price:4.99, expiryDate:"2025-12-01" },
+      { id:1003, displayNumber:3, name:"Canned Beans", barcode:"376012", quantity:24, price:1.29, expiryDate:null }
+    ];
+    stockItems = demo;
+    reorderNumbers();
+    renderDataTable();
+  }
+
+  // ========== LABEL FUNCTIONS (new) ==========
+  async function generateBarcodeDataURL(code, width=1.7, height=38) {
+    return new Promise(resolve => {
+      const canvas = document.createElement('canvas');
+      try {
+        JsBarcode(canvas, code, { format: "CODE128", displayValue: true, fontSize: 9, height, width });
+        resolve(canvas.toDataURL());
+      } catch(e) {
+        const dummy = document.createElement('canvas');
+        dummy.width = 150; dummy.height = 40;
+        dummy.getContext('2d').fillText("error", 10, 20);
+        resolve(dummy.toDataURL());
+      }
+    });
+  }
+
+  async function generateBatchPDF(itemsArray, filename = "labels") {
+    if (!itemsArray.length) { showToast("No items", true); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const margin = 5, cols = 5;
+    const labelW = (210 - margin * 2) / cols;
+    const labelH = 32;
+    let idx = 0;
+    for (let i = 0; i < itemsArray.length; i++) {
+      const item = itemsArray[i];
+      const col = idx % cols;
+      const row = Math.floor(idx / cols) % 7;
+      if (col === 0 && row === 0 && idx !== 0) doc.addPage();
+      const x = margin + col * labelW;
+      const y = margin + row * labelH;
+      if (y + labelH > 297) { doc.addPage(); idx = 0; continue; }
+      doc.rect(x, y, labelW-1, labelH-2, 'S');
+      doc.setFontSize(9); doc.setTextColor(30,70,110); doc.text(item.name.substring(0,28), x+2, y+5);
+      doc.setFontSize(8); doc.setTextColor(60,100,130); doc.text(`$${(item.price||0).toFixed(2)}`, x+2, y+12);
+      const barcodeImg = await generateBarcodeDataURL(item.barcode || `ID${item.id}`, 1.6, 20);
+      if (barcodeImg) doc.addImage(barcodeImg, 'PNG', x+2, y+16, labelW-8, 7);
+      doc.setFontSize(6); doc.setTextColor(80,100,120); doc.text(item.barcode || "---", x+2, y+27);
+      idx++;
+    }
+    doc.save(`${filename}_${Date.now()}.pdf`);
+    showToast(`✅ PDF with ${itemsArray.length} labels (5 per row)`);
+  }
+
+  async function printBatchHTML(itemsArray) {
+    if (!itemsArray.length) return;
+    let labelsHtml = [];
+    for (let it of itemsArray) {
+      const barcodeImg = await generateBarcodeDataURL(it.barcode || `ID${it.id}`, 2, 35);
+      labelsHtml.push(`<div style="border:1px solid #1f6e8c; border-radius:12px; padding:8px; margin:5px; width:calc(20% - 10px); box-sizing:border-box; background:white; break-inside:avoid; page-break-inside:avoid;"><div style="font-weight:bold; font-size:0.9rem;">${escapeHtml(it.name)}</div><div style="font-size:0.8rem;">💰 $${(it.price||0).toFixed(2)}</div><img src="${barcodeImg}" style="max-width:100%; height:auto; margin:4px 0;" /><div style="font-size:0.65rem;">${it.barcode || ""}</div></div>`);
+    }
+    const win = window.open("", "_blank");
+    if (!win) { showToast("Popup blocked! Allow popups.", true); return; }
+    win.document.write(`<html><head><title>Batch Labels 5/row</title><style>body{font-family:sans-serif; padding:10px;} .grid{display:flex; flex-wrap:wrap; gap:5px;} @media print{body{margin:0; padding:5px;}}</style></head><body><div class="grid">${labelsHtml.join('')}</div></body></html>`);
+    win.document.close(); win.focus(); setTimeout(() => win.print(), 300);
+  }
+
+  async function renderSinglePreview() {
+    let n = document.getElementById("labelProductName").value.trim();
+    let b = document.getElementById("labelBarcode").value.trim();
+    let p = parseFloat(document.getElementById("labelPrice").value);
+    if (!n) { showToast("Product name required", true); return; }
+    if (!b) { showToast("Barcode required", true); return; }
+    document.getElementById("previewName").innerText = n;
+    document.getElementById("previewPrice").innerHTML = `💰 $${p.toFixed(2)}`;
+    document.getElementById("previewBarcodeText").innerText = b;
+    const svg = document.getElementById("labelBarcodeSvg"); svg.innerHTML = "";
+    JsBarcode(svg, b, { format: "CODE128", displayValue: true, fontSize: 12, height: 60 });
+    document.getElementById("labelPreview").classList.remove("hidden");
+  }
+
+  function populateLabelNameList() {
+    const list = document.getElementById("labelNameList");
+    if (!list) return;
+    const uniqueNames = [...new Set(stockItems.map(i => i.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    list.innerHTML = uniqueNames.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+  }
+
+  function syncLabelFieldsByName() {
+    const name = document.getElementById("labelProductName").value.trim();
+    if (!name) return;
+    const match = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
+    if (match) {
+      document.getElementById("labelBarcode").value = match.barcode || "";
+      document.getElementById("labelPrice").value = (match.price !== undefined && match.price !== null) ? match.price : "0.00";
+    }
+  }
+
+  async function printSingleLabels() {
+    let n = document.getElementById("labelProductName").value.trim();
+    let b = document.getElementById("labelBarcode").value.trim();
+    let p = parseFloat(document.getElementById("labelPrice").value);
+    let copies = Math.min(parseInt(document.getElementById("labelCount").value) || 1, 30);
+    if (!n || !b) { showToast("Fill name & barcode", true); return; }
+    const items = Array(copies).fill({ name: n, barcode: b, price: p });
+    await printBatchHTML(items);
+  }
+
+  async function downloadSinglePDF() {
+    let n = document.getElementById("labelProductName").value.trim();
+    let b = document.getElementById("labelBarcode").value.trim();
+    let p = parseFloat(document.getElementById("labelPrice").value);
+    let copies = Math.min(parseInt(document.getElementById("labelCount").value) || 1, 30);
+    if (!n || !b) { showToast("Fill all fields", true); return; }
+    const items = Array(copies).fill({ name: n, barcode: b, price: p });
+    await generateBatchPDF(items, "single_label");
+  }
+
+  function resetLabelUI() {
+    document.getElementById("labelProductName").value = "";
+    document.getElementById("labelBarcode").value = "";
+    document.getElementById("labelPrice").value = "0.00";
+    document.getElementById("labelCount").value = "1";
+    document.getElementById("labelPreview").classList.add("hidden");
+  }
+
+  function prefillLabelFromItem(id) {
+    const it = stockItems.find(i => i.id === id);
+    if (it) {
+      document.getElementById("labelProductName").value = it.name;
+      document.getElementById("labelBarcode").value = it.barcode || "";
+      document.getElementById("labelPrice").value = it.price || 0;
+      document.querySelector('[data-tab="labels"]').click();
+      renderSinglePreview();
+      showToast("Loaded to label maker");
+    }
+  }
+
+  // ========== INIT TABS (updated for labels) ==========
+  function initTabs() {
+    const btns = document.querySelectorAll(".tab-btn");
+    const panels = {
+      entry: document.getElementById("entryPanel"),
+      data: document.getElementById("dataPanel"),
+      analysis: document.getElementById("analysisPanel"),
+      labels: document.getElementById("labelsPanel")
+    };
+    btns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tabId = btn.getAttribute("data-tab");
+        btns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        Object.values(panels).forEach(p => p.classList.remove("active-panel"));
+        if (tabId === "entry") panels.entry.classList.add("active-panel");
+        if (tabId === "data") { panels.data.classList.add("active-panel"); renderDataTable(); }
+        if (tabId === "analysis") { panels.analysis.classList.add("active-panel"); renderAnalysisPanel(); }
+        if (tabId === "labels") panels.labels.classList.add("active-panel");
+        if (tabId !== "entry") stopScanner();
+      });
+    });
+  }
+
+  // ========== EVENT BINDINGS (original + sort + labels) ==========
+  document.addEventListener("DOMContentLoaded", () => {
+    loadInitial();
+    initTabs();
+
+    document.getElementById("addUpdateBtn").addEventListener("click", addOrUpdateItem);
+    document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
+    document.getElementById("deleteAllBtn").addEventListener("click", deleteAllItems);
+    document.getElementById("saveDataBtn").addEventListener("click", () => { persist(); showToast("Manual save"); });
+    document.getElementById("importExcelBtn").addEventListener("click", triggerImport);
+    document.getElementById("exportExcelBtn").addEventListener("click", exportExcelWithAlert);
+    document.getElementById("exportPdfBtn").addEventListener("click", exportPdfWithAlert);
+    document.getElementById("refreshAnalysisBtn").addEventListener("click", renderAnalysisPanel);
+
+    document.getElementById("searchInputData").addEventListener("input", (e) => { currentSearch = e.target.value.toLowerCase(); renderDataTable(); });
+    document.getElementById("sortBySelect").addEventListener("change", (e) => { currentSort = e.target.value; renderDataTable(); });
+
+    document.getElementById("tableBody").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const id = Number(btn.getAttribute("data-id"));
+      if (isNaN(id)) return;
+      if (btn.classList.contains("edit-btn")) startEdit(id);
+      if (btn.classList.contains("delete-btn")) deleteItemById(id);
+      if (btn.classList.contains("label-btn")) prefillLabelFromItem(id);
+    });
+
+    // scanner controls
+    document.getElementById("startScanBtn").addEventListener("click", startScanner);
+    document.getElementById("closeScannerBtn").addEventListener("click", stopScanner);
+
+    // label panel events
+    document.getElementById("generateLabelBtn").addEventListener("click", renderSinglePreview);
+    document.getElementById("printLabelBtn").addEventListener("click", printSingleLabels);
+    document.getElementById("downloadPdfLabelBtn").addEventListener("click", downloadSinglePDF);
+    document.getElementById("resetLabelBtn").addEventListener("click", resetLabelUI);
+    document.getElementById("labelProductName").addEventListener("input", syncLabelFieldsByName);
+
+    document.getElementById("batchPdfAllBtn").addEventListener("click", async () => {
+      if (stockItems.length) await generateBatchPDF([...stockItems], "all_items");
+      else showToast("No items", true);
+    });
+    document.getElementById("batchPrintAllBtn").addEventListener("click", async () => {
+      if (stockItems.length) await printBatchHTML(stockItems);
+      else showToast("No items", true);
+    });
+
+    document.body.addEventListener("click", () => { if(audioCtx && audioCtx.state === "suspended") audioCtx.resume(); }, { once: true });
+  });
+</script>
+</body>
+</html>
