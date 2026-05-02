@@ -517,12 +517,12 @@
     const day = parts[2];
     const month = parts[1];
     const yearShort = parts[0].slice(-2);
-    return `﷼{day}/﷼{month}/﷼{yearShort}`;
+    return `${day}/${month}/${yearShort}`;
   }
   function parseToInternalDate(dateStr) {
     if (!dateStr || dateStr.trim() === "") return null;
     let trimmed = dateStr.trim();
-    if (/^\d{4}-\d{2}-\d{2}﷼/.test(trimmed)) return trimmed;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
     let parts = trimmed.split("/");
     if (parts.length === 3) {
       let day = parts[0].padStart(2,'0');
@@ -530,8 +530,8 @@
       let year = parts[2];
       if (year.length === 2) year = "20" + year;
       if (year.length === 4) {
-        let date = new Date(`﷼{year}-﷼{month}-﷼{day}`);
-        if (!isNaN(date.getTime())) return `﷼{year}-﷼{month}-﷼{day}`;
+        let date = new Date(`${year}-${month}-${day}`);
+        if (!isNaN(date.getTime())) return `${year}-${month}-${day}`;
       }
     }
     let d = new Date(trimmed);
@@ -558,7 +558,7 @@
     const totalQ = stockItems.reduce((s,i)=> s + (Number(i.quantity)||0),0);
     document.getElementById("totalQtyStat").innerText = totalQ;
     const totalVal = calcTotalValue();
-    document.getElementById("totalValueStat").innerText = `﷼﷼{totalVal.toFixed(2)}`;
+    document.getElementById("totalValueStat").innerText = `﷼${totalVal.toFixed(2)}`;
   }
   function persist() {
     const toStore = stockItems.map(({id, displayNumber, name, barcode, quantity, expiryDate, price}) => 
@@ -575,7 +575,7 @@
     setTimeout(() => toast.style.opacity = "0", 2500);
     if (isError) playSound("error"); else playSound("click");
   }
-  function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+  function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'>'); }
 
   // NEW: get filtered & sorted array
   function getFilteredSorted() {
@@ -603,18 +603,18 @@
       else if (item.quantity === 0) statusBadge = `<span class="zero-qty-badge">No stock</span>`;
       else statusBadge = "✓";
       const priceValue = (item.price && !isNaN(item.price)) ? parseFloat(item.price).toFixed(2) : "0.00";
-      html += `<tr class="﷼{rowClass}" data-id="﷼{item.id}">
-        <td>﷼{item.displayNumber}</td>
-        <td>﷼{escapeHtml(item.name)}</td>
-        <td><span style="font-family:monospace;">﷼{item.barcode ? escapeHtml(item.barcode) : "—"}</span></td>
-        <td>﷼{Number(item.quantity)}</td>
-        <td>﷼﷼{priceValue}</td>
-        <td>﷼{expiryDisplay}</td>
-        <td>﷼{statusBadge}</td>
+      html += `<tr class="${rowClass}" data-id="${item.id}">
+        <td>${item.displayNumber}</td>
+        <td>${escapeHtml(item.name)}</td>
+        <td><span style="font-family:monospace;">${item.barcode ? escapeHtml(item.barcode) : "—"}</span></td>
+        <td>${Number(item.quantity)}</td>
+        <td>﷼${priceValue}</td>
+        <td>${expiryDisplay}</td>
+        <td>${statusBadge}</td>
         <td class="action-cell">
-          <button class="edit-btn" data-id="﷼{item.id}">Edit</button>
-          <button class="delete-btn danger" data-id="﷼{item.id}">Del</button>
-          <button class="label-btn" data-id="﷼{item.id}">🏷️ Label</button>
+          <button class="edit-btn" data-id="${item.id}">Edit</button>
+          <button class="delete-btn danger" data-id="${item.id}">Del</button>
+          <button class="label-btn" data-id="${item.id}">🏷️ Label</button>
         </td>
        </tr>`;
     });
@@ -757,7 +757,7 @@
         config,
         (decodedText) => {
           document.getElementById("barcode").value = decodedText;
-          showToast(`✅ Scanned: ﷼{decodedText}`);
+          showToast(`✅ Scanned: ${decodedText}`);
           stopScanner();
           playSound("click");
         },
@@ -780,19 +780,19 @@
     const zeroQtyItems = stockItems.filter(i => (Number(i.quantity) === 0));
     document.getElementById("analTotalItems").innerText = totalItems;
     document.getElementById("analTotalQty").innerText = totalQty;
-    document.getElementById("analTotalValue").innerHTML = `﷼﷼{totalValue.toFixed(2)}`;
+    document.getElementById("analTotalValue").innerHTML = `﷼${totalValue.toFixed(2)}`;
     document.getElementById("analExpiryiringCount").innerText = expiryiringItems.length;
     document.getElementById("analZeroQtyCount").innerText = zeroQtyItems.length;
     const expiryiringUl = document.getElementById("expiryiringList");
-    expiryiringUl.innerHTML = expiryiringItems.length ? expiryiringItems.map(i => `<li style="margin-bottom: 5px;"><strong>﷼{escapeHtml(i.name)}</strong> (expiry: ﷼{formatDisplayDate(i.expiryDate)}) qty:﷼{i.quantity}</li>`).join('') : "<li>No items expiring soon.</li>";
+    expiryiringUl.innerHTML = expiryiringItems.length ? expiryiringItems.map(i => `<li style="margin-bottom: 5px;"><strong>${escapeHtml(i.name)}</strong> (expiry: ${formatDisplayDate(i.expiryDate)}) qty:${i.quantity}</li>`).join('') : "<li>No items expiring soon.</li>";
     const zeroUl = document.getElementById("zeroStockList");
-    zeroUl.innerHTML = zeroQtyItems.length ? zeroQtyItems.map(i => `<li style="margin-bottom: 5px;">﷼{escapeHtml(i.name)} — barcode: ﷼{i.barcode || "—"} (qty 0)</li>`).join('') : "<li>No zero‑stock items.</li>";
+    zeroUl.innerHTML = zeroQtyItems.length ? zeroQtyItems.map(i => `<li style="margin-bottom: 5px;">${escapeHtml(i.name)} — barcode: ${i.barcode || "—"} (qty 0)</li>`).join('') : "<li>No zero‑stock items.</li>";
   }
 
   // ========== EXCEL IMPORT / EXPORT (original) ==========
   function parseAnyDateToInternal(value) {
     if (!value || value === "") return null;
-    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}﷼/.test(value.trim())) return value.trim();
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
     if (typeof value === 'number') {
       const utc_days = value - 25569;
       const date = new Date(utc_days * 86400000);
@@ -808,8 +808,8 @@
         let year = parts[2];
         if (year.length === 2) year = "20" + year;
         if (year.length === 4) {
-          let testDate = new Date(`﷼{year}-﷼{month}-﷼{day}`);
-          if (!isNaN(testDate.getTime())) return `﷼{year}-﷼{month}-﷼{day}`;
+          let testDate = new Date(`${year}-${month}-${day}`);
+          if (!isNaN(testDate.getTime())) return `${year}-${month}-${day}`;
         }
       }
       let d = new Date(trimmed);
@@ -877,14 +877,14 @@
       reorderNumbers();
       renderDataTable();
       if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
-      showToast(`Imported ﷼{newItems.length} items (price column included)`, false);
+      showToast(`Imported ${newItems.length} items (price column included)`, false);
     };
     reader.readAsArrayBuffer(file);
   }
   function triggerImport() { let inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls'; inp.onchange=e=>{ if(inp.files[0]) importExcelFile(inp.files[0]); }; inp.click(); }
   function exportExcelWithAlert() {
     if (!stockItems.length) { showToast("No data", true); return; }
-    const wsData = "#", "Product Name", "Barcode", "Qty", "Price (﷼)", "Expiry (DD/MM/YY)", "Status";
+    const wsData = [["#", "Product Name", "Barcode", "Qty", "Price (﷼)", "Expiry (DD/MM/YY)", "Status"]];
     for (let item of stockItems) {
       const expiring = isExpiryiringSoon(item.expiryDate);
       const status = expiring ? "EXPIRING" : (item.quantity === 0 ? "ZERO STOCK" : "OK");
@@ -898,14 +898,14 @@
     ws['!cols'] = [{wch:5},{wch:22},{wch:15},{wch:8},{wch:10},{wch:18},{wch:12}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-    XLSX.writeFile(wb, `inventory_﷼{Date.now()}.xlsx`);
+    XLSX.writeFile(wb, `inventory_${Date.now()}.xlsx`);
     showToast("Excel exported with Price");
   }
   async function exportPdfWithAlert() {
     if (!stockItems.length) { showToast("No data", true); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const headers = "#", "Product Name", "Barcode", "Quantity", "Price (﷼)", "Expiry", "Status";
+    const headers = [["#", "Product Name", "Barcode", "Quantity", "Price (﷼)", "Expiry", "Status"]];
     const body = stockItems.map(i => [
       i.displayNumber, i.name, i.barcode || "", i.quantity,
       (i.price ? parseFloat(i.price).toFixed(2) : "0.00"),
@@ -915,7 +915,7 @@
     const rowStyles = {};
     stockItems.forEach((it, idx) => { if (isExpiryiringSoon(it.expiryDate)) rowStyles[idx] = { fillColor: [255, 204, 204] }; });
     doc.autoTable({ head: headers, body: body, startY: 28, headStyles: { fillColor: [44,125,160], textColor: 255 }, rowStyles: rowStyles, margin: { left: 10, right: 10 } });
-    doc.save(`stock_report_﷼{Date.now()}.pdf`);
+    doc.save(`stock_report_${Date.now()}.pdf`);
     showToast("PDF exported with price column");
   }
 
@@ -929,7 +929,7 @@
           stockItems = parsed.map(p => ({ ...p, quantity: p.quantity ?? 0, price: (p.price !== undefined) ? p.price : null }));
           reorderNumbers();
           renderDataTable();
-          showToast(`Loaded ﷼{stockItems.length} items`);
+          showToast(`Loaded ${stockItems.length} items`);
           return;
         }
       } catch(e) {}
@@ -978,26 +978,26 @@
       if (y + labelH > 297) { doc.addPage(); idx = 0; continue; }
       doc.rect(x, y, labelW-1, labelH-2, 'S');
       doc.setFontSize(9); doc.setTextColor(30,70,110); doc.text(item.name.substring(0,28), x+2, y+5);
-      doc.setFontSize(8); doc.setTextColor(60,100,130); doc.text(`﷼﷼{(item.price||0).toFixed(2)}`, x+2, y+12);
-      const barcodeImg = await generateBarcodeDataURL(item.barcode || `ID﷼{item.id}`, 1.6, 20);
+      doc.setFontSize(8); doc.setTextColor(60,100,130); doc.text(`﷼${(item.price||0).toFixed(2)}`, x+2, y+12);
+      const barcodeImg = await generateBarcodeDataURL(item.barcode || `ID${item.id}`, 1.6, 20);
       if (barcodeImg) doc.addImage(barcodeImg, 'PNG', x+2, y+16, labelW-8, 7);
       doc.setFontSize(6); doc.setTextColor(80,100,120); doc.text(item.barcode || "---", x+2, y+27);
       idx++;
     }
-    doc.save(`﷼{filename}_﷼{Date.now()}.pdf`);
-    showToast(`✅ PDF with ﷼{itemsArray.length} labels (5 per row)`);
+    doc.save(`${filename}_${Date.now()}.pdf`);
+    showToast(`✅ PDF with ${itemsArray.length} labels (5 per row)`);
   }
 
   async function printBatchHTML(itemsArray) {
     if (!itemsArray.length) return;
     let labelsHtml = [];
     for (let it of itemsArray) {
-      const barcodeImg = await generateBarcodeDataURL(it.barcode || `ID﷼{it.id}`, 2, 35);
-      labelsHtml.push(`<div style="border:1px solid #1f6e8c; border-radius:12px; padding:8px; margin:5px; width:calc(20% - 10px); box-sizing:border-box; background:white; break-inside:avoid; page-break-inside:avoid;"><div style="font-weight:bold; font-size:0.9rem;">﷼{escapeHtml(it.name)}</div><div style="font-size:0.8rem;">💰 ﷼﷼{(it.price||0).toFixed(2)}</div><img src="﷼{barcodeImg}" style="max-width:100%; height:auto; margin:4px 0;" /><div style="font-size:0.65rem;">﷼{it.barcode || ""}</div></div>`);
+      const barcodeImg = await generateBarcodeDataURL(it.barcode || `ID${it.id}`, 2, 35);
+      labelsHtml.push(`<div style="border:1px solid #1f6e8c; border-radius:12px; padding:8px; margin:5px; width:calc(20% - 10px); box-sizing:border-box; background:white; break-inside:avoid; page-break-inside:avoid;"><div style="font-weight:bold; font-size:0.9rem;">${escapeHtml(it.name)}</div><div style="font-size:0.8rem;">💰 ﷼${(it.price||0).toFixed(2)}</div><img src="${barcodeImg}" style="max-width:100%; height:auto; margin:4px 0;" /><div style="font-size:0.65rem;">${it.barcode || ""}</div></div>`);
     }
     const win = window.open("", "_blank");
     if (!win) { showToast("Popup blocked! Allow popups.", true); return; }
-    win.document.write(`<html><head><title>Batch Labels 5/row</title><style>body{font-family:sans-serif; padding:10px;} .grid{display:flex; flex-wrap:wrap; gap:5px;} @media print{body{margin:0; padding:5px;}}</style></head><body><div class="grid">﷼{labelsHtml.join('')}</div></body></html>`);
+    win.document.write(`<html><head><title>Batch Labels 5/row</title><style>body{font-family:sans-serif; padding:10px;} .grid{display:flex; flex-wrap:wrap; gap:5px;} @media print{body{margin:0; padding:5px;}}</style></head><body><div class="grid">${labelsHtml.join('')}</div></body></html>`);
     win.document.close(); win.focus(); setTimeout(() => win.print(), 300);
   }
 
@@ -1008,7 +1008,7 @@
     if (!n) { showToast("Product name required", true); return; }
     if (!b) { showToast("Barcode required", true); return; }
     document.getElementById("previewName").innerText = n;
-    document.getElementById("previewPrice").innerHTML = `💰 ﷼﷼{p.toFixed(2)}`;
+    document.getElementById("previewPrice").innerHTML = `﷼${p.toFixed(2)}`;
     document.getElementById("previewBarcodeText").innerText = b;
     const svg = document.getElementById("labelBarcodeSvg"); svg.innerHTML = "";
     JsBarcode(svg, b, { format: "CODE128", displayValue: true, fontSize: 12, height: 60 });
@@ -1019,7 +1019,7 @@
     const list = document.getElementById("labelNameList");
     if (!list) return;
     const uniqueNames = [...new Set(stockItems.map(i => i.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-    list.innerHTML = uniqueNames.map(name => `<option value="﷼{escapeHtml(name)}"></option>`).join('');
+    list.innerHTML = uniqueNames.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
   }
 
   function syncLabelFieldsByName() {
