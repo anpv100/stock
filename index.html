@@ -1,1330 +1,2363 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>StockFlow Pro · Smart Inventory + Labels + Counting</title>
-  <!-- SheetJS + jsPDF + autoTable + HTML5 QR Scanner + JsBarcode -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    }
-    body {
-      background: linear-gradient(145deg, #eef2fa 0%, #e0e8f0 100%);
-      padding: 0.75rem;
-      min-height: 100vh;
-      font-size: 0.8rem;
-    }
-    .app-container {
-      max-width: 1500px;
-      margin: 0 auto;
-    }
-    .flex-header {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
-    h1 {
-      font-size: 1.4rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #0b2b3b, #1b5a7a);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      letter-spacing: -0.2px;
-    }
-    .stats-badge {
-      background: rgba(255,255,255,0.7);
-      backdrop-filter: blur(4px);
-      padding: 0.25rem 1rem;
-      border-radius: 40px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: #1f4e6e;
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-    .tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-bottom: 1rem;
-      border-bottom: 1px solid rgba(31,110,140,0.2);
-      padding-bottom: 0.3rem;
-    }
-    .tab-btn {
-      background: transparent;
-      padding: 0.4rem 1.2rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border-radius: 60px;
-      color: #3b6f8c;
-      transition: all 0.2s;
-      border: none;
-      cursor: pointer;
-    }
-    .tab-btn.active {
-      background: #1f6e8c;
-      color: white;
-      box-shadow: 0 4px 10px rgba(31,110,140,0.2);
-    }
-    .panel {
-      display: none;
-      animation: fade 0.2s ease;
-    }
-    .panel.active-panel {
-      display: block;
-    }
-    @keyframes fade {
-      from { opacity: 0; transform: translateY(4px);}
-      to { opacity: 1; transform: translateY(0);}
-    }
-    .glass-card {
-      background: white;
-      border-radius: 1.5rem;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 6px 16px -6px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.04);
-    }
-    .form-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      align-items: flex-end;
-    }
-    .input-field {
-      flex: 1;
-      min-width: 110px;
-    }
-    .input-field label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: #2c6e8f;
-      letter-spacing: 0.3px;
-      margin-bottom: 0.2rem;
-      display: block;
-    }
-    .input-field input {
-      width: 100%;
-      padding: 0.5rem 0.8rem;
-      border-radius: 28px;
-      border: 1.5px solid #e2edf2;
-      background: #fefefe;
-      font-size: 0.8rem;
-    }
-    .btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.2rem;
-    }
-    button {
-      border: none;
-      padding: 0.45rem 1rem;
-      border-radius: 40px;
-      font-weight: 600;
-      font-size: 0.7rem;
-      cursor: pointer;
-      background: #eef2f6;
-      color: #1f3b4c;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: 0.2s;
-    }
-    button.primary { background: #1f6e8c; color: white; box-shadow: 0 2px 6px rgba(31,110,140,0.2); }
-    button.danger { background: #ffe2e0; color: #bc4e4e; }
-    button.warning { background: #fff0db; color: #b45f1b; }
-    button.scan-btn { background: #2c6e8f; color: white; }
-    .search-box {
-      position: relative;
-      flex: 2;
-      min-width: 180px;
-    }
-    .search-box input {
-      width: 100%;
-      padding: 0.45rem 1rem 0.45rem 2rem;
-      border-radius: 40px;
-      border: 1px solid #d4e2ec;
-      font-size: 0.75rem;
-    }
-    .table-wrapper {
-      overflow-x: auto;
-      border-radius: 1rem;
-      background: white;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.7rem;
-    }
-    th {
-      background: #f4f9fe;
-      padding: 0.55rem 0.7rem;
-      text-align: left;
-      color: #1f4e6e;
-      font-weight: 700;
-      font-size: 0.7rem;
-    }
-    td {
-      padding: 0.5rem 0.7rem;
-      border-bottom: 1px solid #ecf3f8;
-      vertical-align: middle;
-      font-size: 0.7rem;
-      line-height: 1.3;
-    }
-    .expiryiring-row { background-color: #ffe6e3 !important; }
-    .expiryiring-badge {
-      background: #ffc2b3;
-      color: #a12a1a;
-      font-size: 0.65rem;
-      font-weight: 700;
-      padding: 0.15rem 0.6rem;
-      border-radius: 30px;
-      display: inline-block;
-    }
-    .zero-qty-badge {
-      background: #e9ecef;
-      color: #6c757d;
-      font-size: 0.65rem;
-      border-radius: 20px;
-      padding: 0.15rem 0.5rem;
-    }
-    .analysis-stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.8rem;
-      margin-bottom: 1rem;
-    }
-    .stat-card {
-      background: white;
-      border-radius: 1.5rem;
-      padding: 0.7rem 1rem;
-      flex: 1;
-      min-width: 110px;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-      border: 1px solid #eef2ff;
-    }
-    .stat-number {
-      font-size: 1.6rem;
-      font-weight: 800;
-      color: #1f6e8c;
-    }
-    .toast-msg {
-      position: fixed;
-      bottom: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1f3b4c;
-      color: white;
-      padding: 6px 18px;
-      border-radius: 60px;
-      font-size: 0.7rem;
-      z-index: 2000;
-      opacity: 0;
-      transition: 0.2s;
-      pointer-events: none;
-      font-weight: 500;
-    }
-    .scanner-area {
-      margin-top: 1rem;
-      border-radius: 1rem;
-      overflow: hidden;
-      background: #1e2a32;
-      transition: 0.2s;
-    }
-    .scanner-container {
-      position: relative;
-      max-width: 360px;
-      width: 100%;
-      margin: 0 auto;
-      border-radius: 1rem;
-      overflow: hidden;
-      background: #000;
-    }
-    .scanner-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #0f2c38;
-      padding: 0.4rem 0.8rem;
-      border-radius: 1rem 1rem 0 0;
-    }
-    .scanner-header span {
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: white;
-    }
-    .close-scanner {
-      background: #bc4e4e;
-      color: white;
-      padding: 0.2rem 0.6rem;
-      font-size: 0.65rem;
-    }
-    .hidden {
-      display: none;
-    }
-    /* ---------- styles for sort & labels ---------- */
-    .sort-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 0.5rem;
-    }
-    .sort-bar select {
-      padding: 0.4rem 1rem;
-      border-radius: 40px;
-      border: 1px solid #d4e2ec;
-      font-size: 0.7rem;
-      background: white;
-      color: #1f4e6e;
-    }
-    .label-preview {
-      background: #f8fcff;
-      border: 1px solid #d4e8f3;
-      padding: 1rem;
-      border-radius: 1rem;
-      max-width: 420px;
-      margin-top: 1rem;
-    }
-    .label-preview h4 {
-      margin-bottom: 0.5rem;
-      font-size: 0.8rem;
-      color: #1f6e8c;
-    }
-    .batch-actions {
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 2px dashed #cde3ef;
-    }
-    .label-btn {
-      background: #e2ecf2;
-      color: #1f3b4c;
-      margin-left: 4px;
-    }
-    @media (max-width: 700px) {
-      body { padding: 0.5rem; }
-      .glass-card { padding: 0.8rem; }
-      button { padding: 0.4rem 0.8rem; font-size: 0.65rem; }
-      th, td { padding: 0.4rem 0.5rem; }
-      .stat-card { padding: 0.5rem; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>StockFlow Pro · Smart Inventory + Labels + Counting</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js">
+    </script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js">
+    </script>
+    <style>
+        :root {
+            --bg: #eef2fa;
+            --bg2: #e0e8f0;
+            --card-bg: #ffffff;
+            --card-border: rgba(0, 0, 0, 0.04);
+            --text: #1f3b4c;
+            --text-secondary: #3b6f8c;
+            --primary: #1f6e8c;
+            --primary-light: #2c8db5;
+            --accent: #f0a04b;
+            --danger: #bc4e4e;
+            --danger-bg: #ffe2e0;
+            --warning-bg: #fff0db;
+            --warning-text: #b45f1b;
+            --input-bg: #fefefe;
+            --input-border: #e2edf2;
+            --table-header: #f4f9fe;
+            --table-border: #ecf3f8;
+            --shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.1);
+            --badge-bg: #e9ecef;
+            --badge-text: #6c757d;
+            --expiry-bg: #ffc2b3;
+            --expiry-text: #a12a1a;
+            --expiry-row: #ffe6e3;
+            --gradient-header: linear-gradient(135deg, #0b2b3b, #1b5a7a);
+            --toggle-bg: #d4e2ec;
+            --chart-bg: #f8fcff;
+            --hover-row: #f0f7fb;
+            --scrollbar-thumb: #c4d6e0;
+            --scrollbar-track: #f0f3f6;
+            --modal-overlay: rgba(0, 0, 0, 0.5);
+            --category-chip-bg: #e8f4f8;
+            --category-chip-text: #1f6e8c;
+            --transition-speed: 0.3s;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1a1d2e;
+            --bg2: #22263a;
+            --card-bg: #282c40;
+            --card-border: rgba(255, 255, 255, 0.06);
+            --text: #e0e4f0;
+            --text-secondary: #a0b4c8;
+            --primary: #4da8d8;
+            --primary-light: #6cc0e8;
+            --accent: #f5b860;
+            --danger: #e07070;
+            --danger-bg: #3d2025;
+            --warning-bg: #3d3020;
+            --warning-text: #e0a040;
+            --input-bg: #2a2e42;
+            --input-border: #3a3e55;
+            --table-header: #2a3045;
+            --table-border: #333850;
+            --shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.4);
+            --badge-bg: #333850;
+            --badge-text: #a0a8c0;
+            --expiry-bg: #5a2025;
+            --expiry-text: #ff9a8a;
+            --expiry-row: #3d2528;
+            --gradient-header: linear-gradient(135deg, #4da8d8, #6cc0e8);
+            --toggle-bg: #3a3e55;
+            --chart-bg: #2a3045;
+            --hover-row: #303550;
+            --scrollbar-thumb: #4a4e65;
+            --scrollbar-track: #2a2e42;
+            --modal-overlay: rgba(0, 0, 0, 0.7);
+            --category-chip-bg: #2a4050;
+            --category-chip-text: #7cc8e8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, var(--bg) 0%, var(--bg2) 100%);
+            padding: 0.75rem;
+            min-height: 100vh;
+            font-size: 0.8rem;
+            color: var(--text);
+            transition: background var(--transition-speed), color var(--transition-speed);
+            scroll-behavior: smooth;
+        }
+        .app-container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .flex-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            background: var(--card-bg);
+            border-radius: 1.5rem;
+            padding: 0.8rem 1.2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--card-border);
+            transition: all var(--transition-speed);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: var(--gradient-header);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            letter-spacing: -0.2px;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--input-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-speed);
+            position: relative;
+            overflow: hidden;
+            color: var(--text);
+        }
+        .theme-toggle:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 16px rgba(31, 110, 140, 0.25);
+            transform: rotate(15deg);
+        }
+        .theme-toggle:active {
+            transform: scale(0.9) rotate(30deg);
+        }
+        .stats-badge {
+            background: rgba(128, 160, 180, 0.15);
+            backdrop-filter: blur(4px);
+            padding: 0.35rem 1.2rem;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            transition: all var(--transition-speed);
+        }
+        .stats-badge strong {
+            color: var(--primary);
+            font-weight: 800;
+        }
+        .last-modified {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            font-style: italic;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-bottom: 0.8rem;
+            border-bottom: 2px solid rgba(31, 110, 140, 0.15);
+            padding-bottom: 0.4rem;
+        }
+        .tab-btn {
+            background: transparent;
+            padding: 0.45rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 60px;
+            color: var(--text-secondary);
+            transition: all 0.25s;
+            border: 1.5px solid transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            letter-spacing: 0.2px;
+        }
+        .tab-btn:hover {
+            background: rgba(31, 110, 140, 0.08);
+            border-color: rgba(31, 110, 140, 0.2);
+            color: var(--primary);
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 14px rgba(31, 110, 140, 0.3);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+        .panel {
+            display: none;
+            animation: fadeSlide 0.3s ease;
+        }
+        .panel.active-panel {
+            display: block;
+        }
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes pulse {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.04);
+            }
+        }
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+        .glass-card {
+            background: var(--card-bg);
+            border-radius: 1.5rem;
+            padding: 1.1rem;
+            margin-bottom: 0.9rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--card-border);
+            transition: all var(--transition-speed);
+        }
+        .glass-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        .form-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            align-items: flex-end;
+        }
+        .input-field {
+            flex: 1;
+            min-width: 100px;
+        }
+        .input-field label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--primary);
+            letter-spacing: 0.4px;
+            margin-bottom: 0.2rem;
+            display: block;
+        }
+        .input-field input,
+        .input-field select,
+        .input-field textarea {
+            width: 100%;
+            padding: 0.5rem 0.8rem;
+            border-radius: 28px;
+            border: 1.5px solid var(--input-border);
+            background: var(--input-bg);
+            font-size: 0.8rem;
+            color: var(--text);
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .input-field textarea {
+            border-radius: 16px;
+            resize: vertical;
+            min-height: 50px;
+            padding: 0.6rem 0.8rem;
+        }
+        .input-field input:focus,
+        .input-field select:focus,
+        .input-field textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(31, 110, 140, 0.1);
+        }
+        .input-field select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%233b6f8c'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 30px;
+        }
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.2rem;
+            align-items: center;
+        }
+        button {
+            border: none;
+            padding: 0.45rem 1rem;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            cursor: pointer;
+            background: var(--badge-bg);
+            color: var(--text);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        button:active {
+            transform: scale(0.96);
+        }
+        button.primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 8px rgba(31, 110, 140, 0.25);
+        }
+        button.primary:hover {
+            background: var(--primary-light);
+            box-shadow: 0 4px 16px rgba(31, 110, 140, 0.35);
+        }
+        button.danger {
+            background: var(--danger-bg);
+            color: var(--danger);
+        }
+        button.warning {
+            background: var(--warning-bg);
+            color: var(--warning-text);
+        }
+        button.scan-btn {
+            background: var(--primary);
+            color: white;
+        }
+        button.success-btn {
+            background: #2b7a4b;
+            color: white;
+        }
+        button.success-btn:hover {
+            background: #35915a;
+        }
+        .search-box {
+            position: relative;
+            flex: 2;
+            min-width: 160px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.45rem 1rem 0.45rem 2.2rem;
+            border-radius: 40px;
+            border: 1.5px solid var(--input-border);
+            font-size: 0.75rem;
+            background: var(--input-bg);
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(31, 110, 140, 0.08);
+            outline: none;
+        }
+        .search-box::before {
+            content: '🔍';
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 1rem;
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+            max-height: 55vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+        }
+        .table-wrapper::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .table-wrapper::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+            border-radius: 10px;
+        }
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7rem;
+            min-width: 700px;
+        }
+        th {
+            background: var(--table-header);
+            padding: 0.6rem 0.7rem;
+            text-align: left;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.68rem;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        td {
+            padding: 0.5rem 0.7rem;
+            border-bottom: 1px solid var(--table-border);
+            vertical-align: middle;
+            font-size: 0.7rem;
+            line-height: 1.3;
+            transition: background 0.15s;
+        }
+        tbody tr:hover {
+            background: var(--hover-row);
+        }
+        .expiryiring-row {
+            background-color: var(--expiry-row) !important;
+        }
+        .expiryiring-badge {
+            background: var(--expiry-bg);
+            color: var(--expiry-text);
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.15rem 0.55rem;
+            border-radius: 30px;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        .zero-qty-badge {
+            background: var(--badge-bg);
+            color: var(--badge-text);
+            font-size: 0.6rem;
+            border-radius: 20px;
+            padding: 0.15rem 0.5rem;
+        }
+        .category-chip {
+            display: inline-block;
+            background: var(--category-chip-bg);
+            color: var(--category-chip-text);
+            font-size: 0.6rem;
+            padding: 0.15rem 0.6rem;
+            border-radius: 20px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+        .analysis-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 1.5rem;
+            padding: 0.8rem 1.1rem;
+            flex: 1;
+            min-width: 110px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--card-border);
+            transition: all var(--transition-speed);
+            cursor: default;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        .stat-number {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f3b4c;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-size: 0.72rem;
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .toast-msg.show {
+            opacity: 1;
+            bottom: 28px;
+        }
+        .scanner-area {
+            margin-top: 1rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: #1e2a32;
+            transition: 0.2s;
+        }
+        .scanner-container {
+            position: relative;
+            max-width: 360px;
+            width: 100%;
+            margin: 0 auto;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: #000;
+        }
+        .scanner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f2c38;
+            padding: 0.4rem 0.8rem;
+            border-radius: 1rem 1rem 0 0;
+        }
+        .scanner-header span {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+        }
+        .close-scanner {
+            background: #bc4e4e;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.65rem;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .sort-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+        .sort-bar select {
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            border: 1.5px solid var(--input-border);
+            font-size: 0.7rem;
+            background: var(--input-bg);
+            color: var(--text);
+            cursor: pointer;
+        }
+        .label-preview {
+            background: var(--chart-bg);
+            border: 1px solid var(--input-border);
+            padding: 1rem;
+            border-radius: 1rem;
+            max-width: 420px;
+            margin-top: 1rem;
+            transition: all var(--transition-speed);
+        }
+        .label-preview h4 {
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--primary);
+        }
+        .batch-actions {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px dashed var(--input-border);
+        }
+        .label-btn {
+            background: rgba(31, 110, 140, 0.1);
+            color: var(--primary);
+            margin-left: 4px;
+        }
+        .bulk-action-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.5rem 1rem;
+            background: var(--primary);
+            color: white;
+            border-radius: 40px;
+            margin-bottom: 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            animation: fadeSlide 0.25s ease;
+            flex-wrap: wrap;
+        }
+        .bulk-action-bar button {
+            background: white;
+            color: var(--primary);
+            font-size: 0.65rem;
+            padding: 0.3rem 0.8rem;
+        }
+        .bulk-action-bar button.danger {
+            background: #ffe2e0;
+            color: #bc4e4e;
+        }
+        .float-add-btn {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 6px 20px rgba(31, 110, 140, 0.4);
+            z-index: 1500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+        .float-add-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 28px rgba(31, 110, 140, 0.5);
+        }
+        .float-add-btn:active {
+            transform: scale(0.9);
+        }
+        .dashboard-chart-container {
+            background: var(--chart-bg);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-top: 0.8rem;
+            border: 1px solid var(--input-border);
+        }
+        .dashboard-chart-container h4 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.6rem;
+        }
+        canvas#dashboardChart {
+            width: 100%;
+            max-height: 280px;
+            border-radius: 8px;
+        }
+        .history-item {
+            font-size: 0.65rem;
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid var(--table-border);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .history-item .time {
+            opacity: 0.6;
+            font-size: 0.6rem;
+            min-width: 65px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--toggle-bg);
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        input:checked+.toggle-slider {
+            background: var(--primary);
+        }
+        input:checked+.toggle-slider::before {
+            transform: translateX(20px);
+        }
+        .checkbox-col {
+            width: 30px;
+            text-align: center;
+        }
+        .checkbox-col input {
+            cursor: pointer;
+            width: 15px;
+            height: 15px;
+            accent-color: var(--primary);
+        }
+        @media (max-width: 700px) {
+            body {
+                padding: 0.4rem;
+            }
+            .glass-card {
+                padding: 0.7rem;
+            }
+            button {
+                padding: 0.35rem 0.7rem;
+                font-size: 0.63rem;
+            }
+            th,
+            td {
+                padding: 0.35rem 0.45rem;
+            }
+            .stat-card {
+                padding: 0.5rem;
+                min-width: 80px;
+            }
+            .stat-number {
+                font-size: 1.2rem;
+            }
+            .float-add-btn {
+                width: 42px;
+                height: 42px;
+                bottom: 14px;
+                right: 14px;
+                font-size: 1.3rem;
+            }
+            .flex-header {
+                padding: 0.6rem 0.8rem;
+                gap: 0.4rem;
+            }
+            h1 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-<div class="app-container">
-  <div class="flex-header">
-    <center><h1>📦 Stock Counter + Labels</h1></center>
-    <div class="stats-badge">
-      <span>Items: <strong id="totalItemsStat">0</strong></span>
-      <span>Total Qty: <strong id="totalQtyStat">0</strong></span>
-      <span>💰 Total Value: <strong id="totalValueStat">﷼0.00</strong></span>
+    <div class="app-container">
+        <div class="flex-header">
+            <div class="header-left">
+                <h1>📦 StockFlow Pro</h1>
+                <span class="last-modified" id="lastModifiedDisplay">Last saved: --</span>
+            </div>
+            <div class="header-actions">
+                <div class="stats-badge">
+                    <span>Items: <strong id="totalItemsStat">0</strong></span>
+                    <span>Total Qty: <strong id="totalQtyStat">0</strong></span>
+                    <span>💰 Value: <strong id="totalValueStat">﷼0.00</strong></span>
+                </div>
+                <button class="theme-toggle" id="themeToggleBtn" title="Toggle Dark/Light Mode" aria-label="Toggle theme">
+                    🌙
+                </button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">🏠 DASHBOARD</button>
+            <button class="tab-btn" data-tab="entry">➕ ENTRY + SCAN</button>
+            <button class="tab-btn" data-tab="data">📋 DATA</button>
+            <button class="tab-btn" data-tab="analysis">📊 ANALYSIS</button>
+            <button class="tab-btn" data-tab="labels">🏷️ LABELS</button>
+            <button class="tab-btn" data-tab="counting">🔢 COUNTING</button>
+        </div>
+
+        <!-- DASHBOARD PANEL -->
+        <div id="dashboardPanel" class="panel active-panel">
+            <div class="glass-card">
+                <h3 style="margin-bottom:0.8rem;font-size:0.95rem;color:var(--primary);">📈 Quick Overview</h3>
+                <div class="analysis-stats">
+                    <div class="stat-card"><div class="stat-number" id="dashTotalItems">0</div><div class="stat-label">Total Items</div></div>
+                    <div class="stat-card"><div class="stat-number" id="dashTotalQty">0</div><div class="stat-label">Total Quantity</div></div>
+                    <div class="stat-card"><div class="stat-number" id="dashTotalValue">﷼0</div><div class="stat-label">Inventory Value</div></div>
+                    <div class="stat-card"><div class="stat-number" id="dashLowStock">0</div><div class="stat-label">Low Stock ⚠️</div></div>
+                    <div class="stat-card"><div class="stat-number" id="dashExpirySoon">0</div><div class="stat-label">Expiring Soon</div></div>
+                    <div class="stat-card"><div class="stat-number" id="dashCategories">0</div><div class="stat-label">Categories</div></div>
+                </div>
+                <div class="dashboard-chart-container">
+                    <h4>📊 Top Categories by Value (﷼)</h4>
+                    <canvas id="dashboardChart" width="600" height="250"></canvas>
+                </div>
+                <div style="margin-top:1rem;">
+                    <h4 style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.4rem;">🕒 Recent Activity</h4>
+                    <div id="historyFeed" style="max-height:150px;overflow-y:auto;background:var(--chart-bg);border-radius:0.8rem;padding:0.3rem;">
+                        <div class="history-item"><span class="time">--</span> No activity yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENTRY PANEL -->
+        <div id="entryPanel" class="panel">
+            <div class="glass-card">
+                <h3 style="margin-bottom: 0.7rem; font-size: 0.9rem; color:var(--primary);">Add / Edit Stock (Barcode Scanner)</h3>
+                <div class="form-grid">
+                    <div class="input-field" style="min-width:60px;"><label># (auto)</label><input type="text" id="itemNumberDisplay" disabled placeholder="Auto"></div>
+                    <div class="input-field"><label>NAME *</label><input type="text" id="productName" placeholder="Product name"></div>
+                    <div class="input-field"><label>BARCODE</label><input type="text" id="barcode" placeholder="Optional / Scan"></div>
+                    <div class="input-field"><label>QTY</label><input type="number" id="productQty" min="0" value="1" step="1"></div>
+                    <div class="input-field"><label>PRICE (﷼)</label><input type="number" id="productPrice" min="0" step="0.01" value="0.00" placeholder="0.00"></div>
+                    <div class="input-field"><label>EXPIRY (DD/MM/YY)</label><input type="text" id="expiryDate" placeholder="DD/MM/YY"></div>
+                    <div class="input-field"><label>CATEGORY</label>
+                        <select id="productCategory"><option value="">Uncategorized</option></select>
+                    </div>
+                    <div class="input-field"><label>SUPPLIER</label><input type="text" id="productSupplier" placeholder="Optional"></div>
+                </div>
+                <div class="form-grid" style="margin-top:0.5rem;">
+                    <div class="input-field" style="flex:3;min-width:200px;"><label>NOTES</label><textarea id="productNotes" placeholder="Optional notes..." rows="2"></textarea></div>
+                </div>
+                <div class="btn-row" style="margin-top:0.6rem;">
+                    <button id="addUpdateBtn" class="primary">➕ Add / Update</button>
+                    <button id="cancelEditBtn" class="warning">Cancel</button>
+                    <button id="undoBtn" class="warning" title="Undo last action (Ctrl+Z)">↩ Undo</button>
+                </div>
+                <div style="margin-top: 0.8rem; display: flex; align-items: center; gap: 10px;">
+                    <button id="startScanBtn" class="scan-btn">📷 Scan Barcode (Camera)</button>
+                </div>
+                <div id="scannerWrapper" class="scanner-area hidden">
+                    <div class="scanner-header">
+                        <span>🔍 Point camera at barcode</span>
+                        <button id="closeScannerBtn" class="close-scanner">✕ Close</button>
+                    </div>
+                    <div id="qr-reader" style="width:100%; max-width:360px; margin:0 auto; min-height: 260px;"></div>
+                    <div style="text-align:center; font-size:0.6rem; padding:4px; background:var(--chart-bg);">rectangle preview — auto closes on scan</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATA PANEL -->
+        <div id="dataPanel" class="panel">
+            <div class="glass-card">
+                <div class="sort-bar" style="justify-content: space-between;">
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <div class="search-box"><input type="text" id="searchInputData" placeholder="Search name or barcode... (Ctrl+F)"></div>
+                        <select id="sortBySelect">
+                            <option value="default">Sort by: #</option>
+                            <option value="name_asc">Name A-Z</option>
+                            <option value="price_asc">Price (low→high)</option>
+                            <option value="price_desc">Price (high→low)</option>
+                            <option value="expiry_asc">Expiry (soon first)</option>
+                            <option value="category_asc">Category A-Z</option>
+                        </select>
+                        <select id="categoryFilterSelect" style="padding:0.4rem 1rem;border-radius:40px;border:1.5px solid var(--input-border);font-size:0.7rem;background:var(--input-bg);color:var(--text);cursor:pointer;">
+                            <option value="all">All Categories</option>
+                        </select>
+                        <label class="toggle-switch" title="Show/Hide Qty Column" style="margin-left:4px;">
+                            <input type="checkbox" id="showQtyColToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span style="font-size:0.6rem;color:var(--text-secondary);">Qty Col</span>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <button id="deleteAllBtn" class="danger">🗑 Delete All</button>
+                        <button id="saveDataBtn" class="primary" style="background:#2b5e3b;">💾 Save Data</button>
+                        <button id="importExcelBtn" style="background:#2b5e3b; color:white;">📥 Import Excel</button>
+                        <button id="exportExcelBtn" style="background:#1a5d4b; color:white;">📤 Export Excel</button>
+                        <button id="exportPdfBtn" style="background:#9c2e3f; color:white;">📑 Export PDF</button>
+                        <button id="jsonBackupBtn" style="background:#5a4a8a; color:white;">📦 JSON Backup</button>
+                        <button id="jsonRestoreBtn" style="background:#8a5a3a; color:white;">📂 JSON Restore</button>
+                    </div>
+                </div>
+                <div id="bulkActionBar" class="bulk-action-bar hidden">
+                    <span id="bulkCountText">0 selected</span>
+                    <button id="bulkDeleteBtn" class="danger">🗑 Delete Selected</button>
+                    <button id="bulkClearBtn">✕ Clear Selection</button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="stockTable">
+                        <thead>
+                            <tr><th class="checkbox-col"><input type="checkbox" id="selectAllCheckbox" title="Select All"></th><th>#</th><th>Product Name</th><th>Barcode</th><th class="qty-col-header hidden">Qty</th><th>Price (﷼)</th><th>Category</th><th>Expiry</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="tableBody"><tr><td colspan="10">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYSIS PANEL -->
+        <div id="analysisPanel" class="panel">
+            <div class="glass-card">
+                <h3 style="margin-bottom: 0.8rem; font-size: 0.95rem;color:var(--primary);">Stock Analytics + Financial</h3>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:0.8rem;flex-wrap:wrap;">
+                    <span style="font-size:0.7rem;color:var(--text-secondary);">Low Stock Threshold:</span>
+                    <input type="number" id="lowStockThreshold" min="0" value="5" step="1" style="width:60px;padding:0.35rem;border-radius:20px;border:1.5px solid var(--input-border);background:var(--input-bg);color:var(--text);text-align:center;">
+                    <button id="applyThresholdBtn" class="primary" style="font-size:0.6rem;padding:0.3rem 0.7rem;">Apply</button>
+                </div>
+                <div class="analysis-stats">
+                    <div class="stat-card"><div class="stat-number" id="analTotalItems">0</div><div class="stat-label">Total Items</div></div>
+                    <div class="stat-card"><div class="stat-number" id="analTotalQty">0</div><div class="stat-label">Total Quantity</div></div>
+                    <div class="stat-card"><div class="stat-number" id="analTotalValue">﷼0</div><div class="stat-label">Inventory Value</div></div>
+                    <div class="stat-card"><div class="stat-number" id="analLowStockCount">0</div><div class="stat-label">Low Stock</div></div>
+                    <div class="stat-card"><div class="stat-number" id="analExpiryiringCount">0</div><div class="stat-label">Expiring ≤ 2m</div></div>
+                    <div class="stat-card"><div class="stat-number" id="analZeroQtyCount">0</div><div class="stat-label">Zero Stock</div></div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem;">
+                    <div style="flex:1; background:var(--warning-bg); border-radius: 1.2rem; padding: 0.8rem;min-width:200px;">
+                        <h4 style="font-size:0.8rem; margin-bottom:0.5rem;color:var(--warning-text);">⚠️ Expiring Soon (≤ 60 days)</h4>
+                        <ul id="expiryiringList" style="margin-top: 0.3rem; list-style: none; font-size:0.7rem;"></ul>
+                    </div>
+                    <div style="flex:1; background:var(--badge-bg); border-radius: 1.2rem; padding: 0.8rem;min-width:200px;">
+                        <h4 style="font-size:0.8rem; margin-bottom:0.5rem;color:var(--badge-text);">📉 Low / Zero Stock Items</h4>
+                        <ul id="zeroStockList" style="margin-top: 0.3rem; list-style: none; font-size:0.7rem;"></ul>
+                    </div>
+                    <div style="flex:1; background:var(--chart-bg); border-radius: 1.2rem; padding: 0.8rem;min-width:200px;">
+                        <h4 style="font-size:0.8rem; margin-bottom:0.5rem;color:var(--text-secondary);">🏷️ Category Breakdown</h4>
+                        <ul id="categoryBreakdownList" style="margin-top: 0.3rem; list-style: none; font-size:0.7rem;"></ul>
+                    </div>
+                </div>
+                <button id="refreshAnalysisBtn" class="primary" style="margin-top: 0.8rem;">🔄 Refresh Analysis</button>
+            </div>
+        </div>
+
+        <!-- LABELS PANEL -->
+        <div id="labelsPanel" class="panel">
+            <div class="glass-card">
+                <h3>🏷️ Single Label Creator</h3>
+                <div class="form-grid">
+                    <div class="input-field"><label>Product Name</label><input type="text" id="labelProductName" list="labelNameList"><datalist id="labelNameList"></datalist></div>
+                    <div class="input-field"><label>Barcode</label><input type="text" id="labelBarcode"></div>
+                    <div class="input-field"><label>Price (﷼)</label><input type="number" id="labelPrice" step="0.01" value="0.00"></div>
+                    <div class="input-field"><label>Copies</label><input type="number" id="labelCount" min="1" value="1" max="30"></div>
+                    <div class="btn-row">
+                        <button id="generateLabelBtn" class="primary">Preview</button>
+                        <button id="printLabelBtn" class="primary">🖨️ Print Labels</button>
+                        <button id="downloadPdfLabelBtn" class="primary">📄 PDF (Single)</button>
+                        <button id="resetLabelBtn">Reset</button>
+                    </div>
+                </div>
+                <div id="labelPreview" class="label-preview hidden">
+                    <h4>Preview (scannable barcode)</h4>
+                    <div><strong id="previewName"></strong></div>
+                    <div><span id="previewPrice"></span> &nbsp; <span id="previewBarcodeText"></span></div>
+                    <svg id="labelBarcodeSvg" width="100%" height="70"></svg>
+                </div>
+                <div class="batch-actions">
+                    <h3>📦 Batch Labels from Inventory (5 labels per row)</h3>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; margin:0.8rem 0;">
+                        <button id="batchPdfAllBtn" class="primary" style="background:#1f6e8c;">📑 PDF for ALL Items (5/row)</button>
+                        <button id="batchPrintAllBtn" class="primary" style="background:#2b5e3b;">🖨️ PRINT All Items (5/row)</button>
+                    </div>
+                    <p style="font-size:0.7rem; background:var(--chart-bg); padding:0.4rem; border-radius:20px;">✅ Each label: name, price, barcode image — arranged 5 per line on A4, ready to cut.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- COUNTING PANEL -->
+        <div id="countingPanel" class="panel">
+            <div class="glass-card">
+                <h3>🔢 Physical Stock Count</h3>
+                <div class="form-grid">
+                    <div class="input-field"><label>Product Name</label><input type="text" id="countProductName" list="countNameList" placeholder="Search name..."><datalist id="countNameList"></datalist></div>
+                    <div class="input-field"><label>Barcode (auto)</label><input type="text" id="countBarcode" readonly placeholder="Auto-filled"></div>
+                    <div class="input-field"><label>Quantity</label><input type="number" id="countQuantity" min="0" value="0" step="1"></div>
+                    <div class="btn-row">
+                        <button id="addCountBtn" class="primary">Add / Update Count</button>
+                        <button id="clearCountFormBtn">Clear Form</button>
+                    </div>
+                </div>
+                <div class="batch-actions" style="margin-top:1rem;">
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                        <button id="cleanQuantityBtn" class="warning">🧹 Set All Quantities to 0</button>
+                        <button id="deleteAllCountBtn" class="danger">Delete All Entries</button>
+                        <button id="exportCountExcelBtn" style="background:#1a5d4b; color:white;">📊 Export Excel (A‑Z)</button>
+                        <button id="exportCountPdfBtn" style="background:#9c2e3f; color:white;">📑 Export PDF (A‑Z)</button>
+                    </div>
+                </div>
+                <div class="table-wrapper" style="margin-top:1rem;">
+                    <table id="countingTable">
+                        <thead><tr><th>Name</th><th>Barcode</th><th>Quantity</th><th>Actions</th></tr></thead>
+                        <tbody id="countingTableBody"><tr><td colspan="4">No counting entries yet</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="entry">1 · ENTRY + SCAN</button>
-    <button class="tab-btn" data-tab="data">2 · DATA</button>
-    <button class="tab-btn" data-tab="analysis">3 · ANALYSIS</button>
-    <button class="tab-btn" data-tab="labels">4 · LABELS</button>
-    <button class="tab-btn" data-tab="counting">5 · COUNTING</button>
-  </div>
+    <button class="float-add-btn" id="floatAddBtn" title="Quick Add (Ctrl+N)">＋</button>
+    <div id="toastMsg" class="toast-msg">✅ Ready</div>
 
-  <!-- ENTRY PANEL -->
-  <div id="entryPanel" class="panel active-panel">
-    <div class="glass-card">
-      <h3 style="margin-bottom: 0.7rem; font-size: 0.9rem; color:#1f6e8c;">Add / Edit Stock (Price + Barcode Scanner)</h3>
-      <div class="form-grid">
-        <div class="input-field" style="min-width: 70px;"><label># (auto)</label><input type="text" id="itemNumberDisplay" disabled placeholder="Auto"></div>
-        <div class="input-field"><label>NAME *</label><input type="text" id="productName" placeholder="Product name"></div>
-        <div class="input-field"><label>BARCODE</label><input type="text" id="barcode" placeholder="Optional / Scan"></div>
-        <div class="input-field"><label>QTY (0 allowed)</label><input type="number" id="productQty" min="0" value="1" step="1"></div>
-        <div class="input-field"><label>PRICE (﷼)</label><input type="number" id="productPrice" min="0" step="0.01" value="0.00" placeholder="0.00"></div>
-        <div class="input-field"><label>EXPIRY (DD/MM/YY)</label><input type="text" id="expiryDate" placeholder="DD/MM/YY"></div>
-        <div class="btn-row">
-          <button id="addUpdateBtn" class="primary">Add / Update</button>
-          <button id="cancelEditBtn" class="warning">Cancel</button>
-        </div>
-      </div>
-      <div style="margin-top: 0.8rem; display: flex; align-items: center; gap: 10px;">
-        <button id="startScanBtn" class="scan-btn">📷 Scan Barcode (Camera)</button>
-      </div>
-      <div id="scannerWrapper" class="scanner-area hidden">
-        <div class="scanner-header">
-          <span>🔍 Point camera at barcode</span>
-          <button id="closeScannerBtn" class="close-scanner">✕ Close</button>
-        </div>
-        <div id="qr-reader" style="width:100%; max-width:360px; margin:0 auto; min-height: 260px;"></div>
-        <div style="text-align:center; font-size:0.6rem; padding:4px; background:#eef2fa;">rectangle preview — auto closes on scan</div>
-      </div>
-    </div>
-  </div>
+    <script>
+        (function() {
+            // ========== STORAGE & GLOBALS ==========
+            const STORAGE_KEY = "stockflow_pro_data_v3";
+            const COUNTING_KEY = "stockflow_counting_data_v2";
+            const SETTINGS_KEY = "stockflow_pro_settings";
+            const HISTORY_KEY = "stockflow_pro_history";
+            const CATEGORIES_KEY = "stockflow_pro_categories";
+            let stockItems = [];
+            let countingItems = [];
+            let editMode = false;
+            let editingId = null;
+            let currentSearch = "";
+            let currentSort = "default";
+            let currentCategoryFilter = "all";
+            let showQtyCol = false;
+            let html5QrCode = null;
+            let scannerActive = false;
+            let lowStockThreshold = 5;
+            let actionHistory = [];
+            let activityLog = [];
+            let savedCategories = ["Dairy", "Bakery", "Canned Goods", "Beverages", "Snacks", "Frozen", "Produce",
+                "Meat", "Seafood", "Condiments", "Grains", "Spices", "Supplements", "Other"
+            ];
 
-  <!-- DATA PANEL (Quantity column removed) -->
-  <div id="dataPanel" class="panel">
-    <div class="glass-card">
-      <div class="sort-bar" style="justify-content: space-between;">
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <div class="search-box"><input type="text" id="searchInputData" placeholder="Search by name or barcode..."></div>
-          <select id="sortBySelect">
-            <option value="default">Sort by: #</option>
-            <option value="name_asc">Name A-Z</option>
-            <option value="price_asc">Price (low→high)</option>
-            <option value="price_desc">Price (high→low)</option>
-            <option value="expiry_asc">Expiry (soon first)</option>
-          </select>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-          <button id="deleteAllBtn" class="danger">Delete All</button>
-          <button id="saveDataBtn" class="primary" style="background:#2b5e3b;">Save Data</button>
-          <button id="importExcelBtn" style="background:#2b5e3b; color:white;">Import Excel</button>
-          <button id="exportExcelBtn" style="background:#1a5d4b; color:white;">Export Excel</button>
-          <button id="exportPdfBtn" style="background:#9c2e3f; color:white;">Export PDF</button>
-        </div>
-      </div>
-      <div class="table-wrapper">
-        <table id="stockTable">
-          <thead>
-            <tr><th>#</th><th>Product Name</th><th>Barcode</th><th>Price (﷼)</th><th>Expiry</th><th>Status</th><th>Actions</th></tr>
-          </thead>
-          <tbody id="tableBody"><tr><td colspan="7">Loading......</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+            // ========== AUDIO ==========
+            let audioCtx = null;
 
-  <!-- ANALYSIS PANEL -->
-  <div id="analysisPanel" class="panel">
-    <div class="glass-card">
-      <h3 style="margin-bottom: 0.8rem; font-size: 0.95rem;">Stock Analytics + Financial</h3>
-      <div class="analysis-stats">
-        <div class="stat-card"><div class="stat-number" id="analTotalItems">0</div><div>Total Items</div></div>
-        <div class="stat-card"><div class="stat-number" id="analTotalQty">0</div><div>Total Quantity</div></div>
-        <div class="stat-card"><div class="stat-number" id="analTotalValue">﷼0</div><div>Inventory Value</div></div>
-        <div class="stat-card"><div class="stat-number" id="analExpiryiringCount">0</div><div>Expiring ≤ 2m</div></div>
-        <div class="stat-card"><div class="stat-number" id="analZeroQtyCount">0</div><div>Zero Stock</div></div>
-      </div>
-      <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem;">
-        <div style="flex:1; background:#fef7e0; border-radius: 1.2rem; padding: 0.8rem;">
-          <h4 style="font-size:0.8rem; margin-bottom:0.5rem;">⚠️ Expiring Soon (≤ 60 days)</h4>
-          <ul id="expiryiringList" style="margin-top: 0.3rem; list-style: none; font-size:0.7rem;"></ul>
-        </div>
-        <div style="flex:1; background:#f0f2f5; border-radius: 1.2rem; padding: 0.8rem;">
-          <h4 style="font-size:0.8rem; margin-bottom:0.5rem;">📉 Zero Stock Items</h4>
-          <ul id="zeroStockList" style="margin-top: 0.3rem; list-style: none; font-size:0.7rem;"></ul>
-        </div>
-      </div>
-      <button id="refreshAnalysisBtn" class="primary" style="margin-top: 0.8rem;">Refresh Analysis</button>
-    </div>
-  </div>
+            function initAudio() { if (!audioCtx && window.AudioContext) audioCtx = new(window.AudioContext || window
+                    .webkitAudioContext)(); }
 
-  <!-- LABELS PANEL -->
-  <div id="labelsPanel" class="panel">
-    <div class="glass-card">
-      <h3>🏷️ Single Label Creator</h3>
-      <div class="form-grid">
-        <div class="input-field"><label>Product Name</label><input type="text" id="labelProductName" list="labelNameList"><datalist id="labelNameList"></datalist></div>
-        <div class="input-field"><label>Barcode</label><input type="text" id="labelBarcode"></div>
-        <div class="input-field"><label>Price (﷼)</label><input type="number" id="labelPrice" step="0.01" value="0.00"></div>
-        <div class="input-field"><label>Copies</label><input type="number" id="labelCount" min="1" value="1" max="30"></div>
-        <div class="btn-row">
-          <button id="generateLabelBtn" class="primary">Preview</button>
-          <button id="printLabelBtn" class="primary">🖨️ Print Labels</button>
-          <button id="downloadPdfLabelBtn" class="primary">📄 PDF (Single)</button>
-          <button id="resetLabelBtn">Reset</button>
-        </div>
-      </div>
-      <div id="labelPreview" class="label-preview hidden">
-        <div class="label-frame">
-          <h4>Preview (scannable barcode)</h4>
-          <div><strong id="previewName"></strong></div>
-          <div><span id="previewPrice"></span>   <span id="previewBarcodeText"></span></div>
-          <svg id="labelBarcodeSvg" width="100%" height="70"></svg>
-        </div>
-      </div>
-      <div class="batch-actions">
-        <h3>📦 Batch Labels from Inventory (5 labels per row)</h3>
-        <div style="display:flex; flex-wrap:wrap; gap:10px; margin:0.8rem 0;">
-          <button id="batchPdfAllBtn" class="primary" style="background:#1f6e8c;">📑 PDF for ALL Items (5/row)</button>
-          <button id="batchPrintAllBtn" class="primary" style="background:#2b5e3b;">🖨️ PRINT All Items (5/row)</button>
-        </div>
-        <p style="font-size:0.7rem; background:#f0f6fa; padding:0.4rem; border-radius:20px;">✅ Each label: name, price, barcode image — arranged 5 per line on A4, ready to cut.</p>
-      </div>
-    </div>
-  </div>
+            function playBeep(type = "click") {
+                if (!audioCtx) initAudio();
+                if (!audioCtx) return;
+                if (audioCtx.state === "suspended") audioCtx.resume();
+                try {
+                    const now = audioCtx.currentTime;
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.frequency.value = type === "error" ? 520 : type === "success" ? 1100 : 880;
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+                    osc.start();
+                    osc.stop(now + 0.2);
+                } catch (e) {}
+            }
 
-  <!-- COUNTING PANEL (NEW) -->
-  <div id="countingPanel" class="panel">
-    <div class="glass-card">
-      <h3>🔢 Physical Stock Count</h3>
-      <div class="form-grid">
-        <div class="input-field"><label>Product Name</label><input type="text" id="countProductName" list="countNameList" placeholder="Search name..."><datalist id="countNameList"></datalist></div>
-        <div class="input-field"><label>Barcode (auto)</label><input type="text" id="countBarcode" readonly placeholder="Auto-filled"></div>
-        <div class="input-field"><label>Quantity</label><input type="number" id="countQuantity" min="0" value="0" step="1"></div>
-        <div class="btn-row">
-          <button id="addCountBtn" class="primary">Add / Update Count</button>
-          <button id="clearCountFormBtn">Clear Form</button>
-        </div>
-      </div>
-      <div class="batch-actions" style="margin-top:1rem;">
-        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
-          <button id="cleanQuantityBtn" class="warning">🧹 Set All Quantities to 0</button>
-          <button id="deleteAllCountBtn" class="danger">Delete All Entries</button>
-          <button id="exportCountExcelBtn" style="background:#1a5d4b; color:white;">📊 Export Excel (A‑Z)</button>
-          <button id="exportCountPdfBtn" style="background:#9c2e3f; color:white;">📑 Export PDF (A‑Z)</button>
-        </div>
-      </div>
-      <div class="table-wrapper" style="margin-top:1rem;">
-        <table id="countingTable">
-          <thead>
-            <tr><th>Name</th><th>Barcode</th><th>Quantity</th><th>Actions</th></tr>
-          </thead>
-          <tbody id="countingTableBody"><tr><td colspan="4">No counting entries yet</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-<div id="toastMsg" class="toast-msg">Ready</div>
+            // ========== DATE HELPERS ==========
+            function formatDisplayDate(isoDate) {
+                if (!isoDate) return "—";
+                const parts = isoDate.split("-");
+                if (parts.length !== 3) return isoDate;
+                return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
+            }
 
-<script>
-  // ========== STORAGE & GLOBALS ==========
-  const STORAGE_KEY = "stockflow_pro_data_v2";
-  const COUNTING_KEY = "stockflow_counting_data_v2";
-  let stockItems = [];
-  let countingItems = [];
-  let editMode = false;
-  let editingId = null;
-  let currentSearch = "";
-  let currentSort = "default";
-  let html5QrCode = null;
-  let scannerActive = false;
+            function parseToInternalDate(dateStr) {
+                if (!dateStr || dateStr.trim() === "") return null;
+                let trimmed = dateStr.trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+                let parts = trimmed.split("/");
+                if (parts.length === 3) {
+                    let day = parts[0].padStart(2, '0');
+                    let month = parts[1].padStart(2, '0');
+                    let year = parts[2];
+                    if (year.length === 2) year = "20" + year;
+                    if (year.length === 4) {
+                        let date = new Date(`${year}-${month}-${day}`);
+                        if (!isNaN(date.getTime())) return `${year}-${month}-${day}`;
+                    }
+                }
+                let d = new Date(trimmed);
+                if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+                return null;
+            }
 
-  // ========== SOUND ==========
-  let audioCtx = null;
-  function initAudio() { if (!audioCtx && window.AudioContext) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-  function playBeep(type = "click") {
-    if (!audioCtx) initAudio();
-    if (!audioCtx) return;
-    if (audioCtx.state === "suspended") audioCtx.resume();
-    try {
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.frequency.value = type === "error" ? 520 : 880;
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
-      osc.start();
-      osc.stop(now + 0.2);
-    } catch(e) {}
-  }
-  function playSound(action) { if (action === "error") playBeep("error"); else playBeep("click"); }
+            function isExpiryiringSoon(isoDate) {
+                if (!isoDate) return false;
+                const expiry = new Date(isoDate);
+                if (isNaN(expiry.getTime())) return false;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const diffDays = Math.floor((expiry - today) / (86400000));
+                return diffDays <= 60 && diffDays >= 0;
+            }
 
-  // ========== DATE HELPERS ==========
-  function formatDisplayDate(isoDate) {
-    if (!isoDate) return "—";
-    const parts = isoDate.split("-");
-    if (parts.length !== 3) return isoDate;
-    return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
-  }
-  function parseToInternalDate(dateStr) {
-    if (!dateStr || dateStr.trim() === "") return null;
-    let trimmed = dateStr.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-    let parts = trimmed.split("/");
-    if (parts.length === 3) {
-      let day = parts[0].padStart(2,'0');
-      let month = parts[1].padStart(2,'0');
-      let year = parts[2];
-      if (year.length === 2) year = "20" + year;
-      if (year.length === 4) {
-        let date = new Date(`${year}-${month}-${day}`);
-        if (!isNaN(date.getTime())) return `${year}-${month}-${day}`;
-      }
-    }
-    let d = new Date(trimmed);
-    if (!isNaN(d.getTime())) return d.toISOString().slice(0,10);
-    return null;
-  }
-  function isExpiryiringSoon(isoDate) {
-    if (!isoDate) return false;
-    const expiry = new Date(isoDate);
-    if (isNaN(expiry.getTime())) return false;
-    const today = new Date(); today.setHours(0,0,0,0);
-    const diffDays = Math.floor((expiry - today) / (86400000));
-    return diffDays <= 60 && diffDays >= 0;
-  }
+            // ========== THEME ==========
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                const btn = document.getElementById('themeToggleBtn');
+                if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+                localStorage.setItem(SETTINGS_KEY + '_theme', theme);
+            }
 
-  // ========== CORE DATA (Stock Items) ==========
-  function reorderNumbers() { for (let i=0; i<stockItems.length; i++) stockItems[i].displayNumber = i+1; }
-  function getNextNum() { return stockItems.length ? Math.max(...stockItems.map(i=>i.displayNumber)) + 1 : 1; }
-  function calcTotalValue() {
-    return stockItems.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
-  }
-  function updateGlobalStats() {
-    document.getElementById("totalItemsStat").innerText = stockItems.length;
-    const totalQ = stockItems.reduce((s,i)=> s + (Number(i.quantity)||0),0);
-    document.getElementById("totalQtyStat").innerText = totalQ;
-    document.getElementById("totalValueStat").innerText = `﷼${calcTotalValue().toFixed(2)}`;
-  }
-  function persist() {
-    const toStore = stockItems.map(({id, displayNumber, name, barcode, quantity, expiryDate, price}) => 
-      ({id, displayNumber, name, barcode, quantity, expiryDate, price: price !== undefined ? price : null}));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
-    updateGlobalStats();
-    if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
-  }
-  function showToast(msg, isError = false) {
-    const toast = document.getElementById("toastMsg");
-    toast.textContent = msg;
-    toast.style.backgroundColor = isError ? "#bc4e4e" : "#1f6e8c";
-    toast.style.opacity = "1";
-    setTimeout(() => toast.style.opacity = "0", 2500);
-    if (isError) playSound("error"); else playSound("click");
-  }
-  function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'>'); }
+            function toggleTheme() {
+                const current = document.documentElement.getAttribute('data-theme');
+                applyTheme(current === 'dark' ? 'light' : 'dark');
+            }
 
-  function getFilteredSorted() {
-    let filtered = stockItems.filter(i => !currentSearch || i.name.toLowerCase().includes(currentSearch) || (i.barcode && i.barcode.toLowerCase().includes(currentSearch)));
-    if (currentSort === "name_asc") filtered.sort((a,b) => a.name.localeCompare(b.name));
-    else if (currentSort === "price_asc") filtered.sort((a,b) => (a.price||0) - (b.price||0));
-    else if (currentSort === "price_desc") filtered.sort((a,b) => (b.price||0) - (a.price||0));
-    else if (currentSort === "expiry_asc") filtered.sort((a,b) => (a.expiryDate||"9999-12-31").localeCompare(b.expiryDate||"9999-12-31"));
-    else filtered.sort((a,b) => (a.displayNumber||0) - (b.displayNumber||0));
-    return filtered;
-  }
+            // ========== TOAST ==========
+            function showToast(msg, isError = false) {
+                const toast = document.getElementById("toastMsg");
+                toast.textContent = (isError ? '❌ ' : '✅ ') + msg;
+                toast.style.backgroundColor = isError ? '#bc4e4e' : '#1f6e8c';
+                toast.classList.add('show');
+                clearTimeout(toast._timeout);
+                toast._timeout = setTimeout(() => toast.classList.remove('show'), 2800);
+                if (isError) playBeep("error");
+                else playBeep("success");
+            }
 
-  // ---------- RENDER DATA TABLE (without quantity column) ----------
-  function renderDataTable() {
-    const tbody = document.getElementById("tableBody");
-    const filtered = getFilteredSorted();
-    if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="7">No items match. Add products</td></tr>`; persist(); return; }
-    let html = "";
-    filtered.forEach(item => {
-      const expiryiring = isExpiryiringSoon(item.expiryDate);
-      const rowClass = expiryiring ? "expiryiring-row" : "";
-      const expiryDisplay = formatDisplayDate(item.expiryDate);
-      let statusBadge = "";
-      if (expiryiring) statusBadge = `<span class="expiryiring-badge">exp</span>`;
-      else if (item.quantity === 0) statusBadge = `<span class="zero-qty-badge">No stock</span>`;
-      else statusBadge = "✓";
-      const priceValue = (item.price && !isNaN(item.price)) ? parseFloat(item.price).toFixed(2) : "0.00";
-      html += `<tr class="${rowClass}" data-id="${item.id}">
-        <td>${item.displayNumber}</td>
-        <td>${escapeHtml(item.name)}</td>
-        <td><span style="font-family:monospace;">${item.barcode ? escapeHtml(item.barcode) : "—"}</span></td>
-        <td>﷼${priceValue}</td>
-        <td>${expiryDisplay}</td>
-        <td>${statusBadge}</td>
-        <td class="action-cell">
-          <button class="edit-btn" data-id="${item.id}">Edit</button>
-          <button class="delete-btn danger" data-id="${item.id}">Del</button>
-          <button class="label-btn" data-id="${item.id}">🏷️ Label</button>
-        </td>
-       </tr>`;
-    });
-    tbody.innerHTML = html;
-    populateLabelNameList();
-    persist();
-  }
+            // ========== HISTORY LOGGING ==========
+            function logActivity(action, detail) {
+                const entry = { time: new Date().toISOString(), action, detail };
+                activityLog.unshift(entry);
+                if (activityLog.length > 50) activityLog = activityLog.slice(0, 50);
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(activityLog));
+                actionHistory.push({ action, detail, undoData: JSON.parse(JSON.stringify(stockItems)) });
+                if (actionHistory.length > 10) actionHistory.shift();
+                renderHistoryFeed();
+                updateLastModified();
+            }
 
-  function resetForm() {
-    document.getElementById("productName").value = "";
-    document.getElementById("barcode").value = "";
-    document.getElementById("productQty").value = "1";
-    document.getElementById("productPrice").value = "0.00";
-    document.getElementById("expiryDate").value = "";
-    document.getElementById("itemNumberDisplay").value = "";
-    editMode = false;
-    editingId = null;
-    document.getElementById("addUpdateBtn").innerHTML = "Add / Update";
-  }
+            function undoLastAction() {
+                if (actionHistory.length === 0) { showToast("Nothing to undo", true); return; }
+                const last = actionHistory.pop();
+                stockItems = last.undoData;
+                reorderNumbers();
+                renderDataTable();
+                updateAllStats();
+                persist();
+                showToast(`Undid: ${last.action}`);
+                logActivity("Undo", last.action);
+            }
 
-  function addOrUpdateItem() {
-    let name = document.getElementById("productName").value.trim();
-    let barcode = document.getElementById("barcode").value.trim() || null;
-    let quantity = parseInt(document.getElementById("productQty").value);
-    let price = parseFloat(document.getElementById("productPrice").value);
-    let expiryInput = document.getElementById("expiryDate").value.trim();
-    if (!name) { showToast("Name required", true); return; }
-    if (isNaN(quantity)) quantity = 0;
-    if (quantity < 0) quantity = 0;
-    if (isNaN(price) || price < 0) price = 0;
-    let internalExpiry = expiryInput ? parseToInternalDate(expiryInput) : null;
-    if (expiryInput && !internalExpiry) { showToast("Invalid date (use DD/MM/YY)", true); return; }
-    if (editMode && editingId !== null) {
-      const idx = stockItems.findIndex(i => i.id === editingId);
-      if (idx !== -1) {
-        stockItems[idx] = { ...stockItems[idx], name, barcode: barcode || null, quantity, price, expiryDate: internalExpiry };
-        showToast("Item updated");
-        resetForm();
-        renderDataTable();
-        if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
-        return;
-      }
-    } else {
-      const newId = Date.now() + Math.floor(Math.random() * 10000);
-      const newNum = getNextNum();
-      stockItems.push({ id: newId, displayNumber: newNum, name, barcode: barcode || null, quantity, price: price, expiryDate: internalExpiry });
-      showToast("Item added");
-      resetForm();
-      renderDataTable();
-      if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
-    }
-  }
+            function renderHistoryFeed() {
+                const feed = document.getElementById('historyFeed');
+                if (!feed) return;
+                if (activityLog.length === 0) {
+                    feed.innerHTML = '<div class="history-item"><span class="time">--</span> No activity yet</div>';
+                    return;
+                }
+                feed.innerHTML = activityLog.slice(0, 10).map(e => {
+                    const d = new Date(e.time);
+                    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    return `<div class="history-item"><span class="time">${timeStr}</span> ${escapeHtml(e.action)}: ${escapeHtml(e.detail)}</div>`;
+                }).join('');
+            }
 
-  function deleteItemById(id) {
-    if (confirm("Delete this item?")) {
-      stockItems = stockItems.filter(i => i.id !== id);
-      reorderNumbers();
-      if (editMode && editingId === id) resetForm();
-      renderDataTable();
-      showToast("Deleted");
-      if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
-    }
-  }
-  function deleteAllItems() {
-    if (stockItems.length === 0) return showToast("Nothing to delete", true);
-    if (confirm("DELETE ALL ITEMS?")) {
-      stockItems = [];
-      resetForm();
-      renderDataTable();
-      showToast("All items cleared");
-      if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
-    }
-  }
-  function startEdit(id) {
-    const item = stockItems.find(i => i.id === id);
-    if (!item) return;
-    document.getElementById("itemNumberDisplay").value = item.displayNumber;
-    document.getElementById("productName").value = item.name;
-    document.getElementById("barcode").value = item.barcode || "";
-    document.getElementById("productQty").value = item.quantity;
-    document.getElementById("productPrice").value = (item.price !== undefined && item.price !== null) ? item.price : 0;
-    document.getElementById("expiryDate").value = item.expiryDate ? formatDisplayDate(item.expiryDate) : "";
-    editMode = true;
-    editingId = item.id;
-    document.getElementById("addUpdateBtn").innerHTML = "Update Stock";
-    document.querySelector('[data-tab="entry"]').click();
-    showToast("Edit mode active");
-  }
+            function updateLastModified() {
+                const el = document.getElementById('lastModifiedDisplay');
+                if (el) {
+                    const now = new Date();
+                    el.textContent = 'Last saved: ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit',
+                        second: '2-digit' });
+                }
+            }
 
-  // ========== BARCODE SCANNER ==========
-  async function stopScanner() {
-    if (html5QrCode && scannerActive) {
-      try { await html5QrCode.stop(); } catch(e) {}
-      scannerActive = false;
-    }
-    document.getElementById("scannerWrapper").classList.add("hidden");
-    if (html5QrCode) { try { html5QrCode.clear(); } catch(e) {} html5QrCode = null; }
-  }
-  async function requestCameraPermission() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showToast("Camera access is not supported in this browser.", true);
-      return false;
-    }
-    if (!window.isSecureContext && window.location.protocol !== "http:" && window.location.protocol !== "https:") {
-      showToast("Camera requires HTTPS or localhost. Open via a secure page and try again.", true);
-      return false;
-    }
-    showToast("Requesting camera permission...", false);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach(track => track.stop());
-      return true;
-    } catch (err) {
-      console.warn("Camera permission denied or unavailable", err);
-      showToast("Camera access denied. Allow permission and try again.", true);
-      return false;
-    }
-  }
-  async function startScanner() {
-    const allowed = await requestCameraPermission();
-    if (!allowed) return;
-    await stopScanner();
-    const wrapper = document.getElementById("scannerWrapper");
-    wrapper.classList.remove("hidden");
-    const readerDiv = document.getElementById("qr-reader");
-    readerDiv.innerHTML = "";
-    if (!window.Html5Qrcode) { showToast("QR scanner library not loaded.", true); wrapper.classList.add("hidden"); return; }
-    html5QrCode = new Html5Qrcode("qr-reader");
-    const config = { fps: 10, qrbox: { width: 250, height: 200 } };
-    try {
-      const cameras = await Html5Qrcode.getCameras();
-      let cameraId = null;
-      if (cameras && cameras.length) {
-        const backCam = cameras.find(cam => cam.label.toLowerCase().includes('back') || cam.label.toLowerCase().includes('rear'));
-        cameraId = backCam ? backCam.id : cameras[0].id;
-      }
-      scannerActive = true;
-      await html5QrCode.start(
-        cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          document.getElementById("barcode").value = decodedText;
-          showToast(`✅ Scanned: ${decodedText}`);
-          stopScanner();
-          playSound("click");
-        },
-        (errMsg) => { /* ignore */ }
-      );
-    } catch (err) {
-      console.error(err);
-      showToast("Camera error: " + (err.message || ""), true);
-      wrapper.classList.add("hidden");
-      scannerActive = false;
-    }
-  }
+            function escapeHtml(str) { if (!str) return '';
+                return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '>'); }
 
-  // ========== ANALYSIS ==========
-  function renderAnalysisPanel() {
-    const totalItems = stockItems.length;
-    const totalQty = stockItems.reduce((s,i)=> s + (Number(i.quantity)||0),0);
-    const totalValue = calcTotalValue();
-    const expiryiringItems = stockItems.filter(i => isExpiryiringSoon(i.expiryDate));
-    const zeroQtyItems = stockItems.filter(i => (Number(i.quantity) === 0));
-    document.getElementById("analTotalItems").innerText = totalItems;
-    document.getElementById("analTotalQty").innerText = totalQty;
-    document.getElementById("analTotalValue").innerHTML = `﷼${totalValue.toFixed(2)}`;
-    document.getElementById("analExpiryiringCount").innerText = expiryiringItems.length;
-    document.getElementById("analZeroQtyCount").innerText = zeroQtyItems.length;
-    const expiryiringUl = document.getElementById("expiryiringList");
-    expiryiringUl.innerHTML = expiryiringItems.length ? expiryiringItems.map(i => `<li style="margin-bottom: 5px;"><strong>${escapeHtml(i.name)}</strong> (expiry: ${formatDisplayDate(i.expiryDate)}) qty:${i.quantity}</li>`).join('') : "<li>No items expiring soon.</li>";
-    const zeroUl = document.getElementById("zeroStockList");
-    zeroUl.innerHTML = zeroQtyItems.length ? zeroQtyItems.map(i => `<li style="margin-bottom: 5px;">${escapeHtml(i.name)} — barcode: ${i.barcode || "—"} (qty 0)</li>`).join('') : "<li>No zero‑stock items.</li>";
-  }
+            // ========== CATEGORIES ==========
+            function loadCategories() {
+                const saved = localStorage.getItem(CATEGORIES_KEY);
+                if (saved) {
+                    try { const arr = JSON.parse(saved); if (Array.isArray(arr) && arr.length) savedCategories = arr; } catch (
+                        e) {}
+                }
+            }
 
-  // ========== EXCEL IMPORT / EXPORT (Data) ==========
-  function parseAnyDateToInternal(value) {
-    if (!value || value === "") return null;
-    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
-    if (typeof value === 'number') {
-      const utc_days = value - 25569;
-      const date = new Date(utc_days * 86400000);
-      if (!isNaN(date.getTime())) return date.toISOString().slice(0,10);
-      return null;
-    }
-    if (typeof value === 'string') {
-      let trimmed = value.trim();
-      let parts = trimmed.split("/");
-      if (parts.length === 3) {
-        let day = parts[0].padStart(2,'0');
-        let month = parts[1].padStart(2,'0');
-        let year = parts[2];
-        if (year.length === 2) year = "20" + year;
-        if (year.length === 4) {
-          let testDate = new Date(`${year}-${month}-${day}`);
-          if (!isNaN(testDate.getTime())) return `${year}-${month}-${day}`;
-        }
-      }
-      let d = new Date(trimmed);
-      if (!isNaN(d.getTime())) return d.toISOString().slice(0,10);
-    }
-    return null;
-  }
+            function saveCategories() {
+                localStorage.setItem(CATEGORIES_KEY, JSON.stringify(savedCategories));
+            }
 
-  // UPDATED import: Quantity column is now optional. Missing Qty → default 0.
-  function importExcelFile(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-      if (!rows.length) { showToast("Empty file", true); return; }
-      let headerRowIndex = -1, headerRow = null;
-      for (let i = 0; i < Math.min(rows.length, 20); i++) {
-        const row = rows[i];
-        if (!row) continue;
-        const rowStr = row.map(c => String(c || "").toLowerCase()).join(" ");
-        if (rowStr.includes("name") && (rowStr.includes("qty") || rowStr.includes("quantity") || rowStr.includes("price"))) {
-          headerRowIndex = i;
-          headerRow = row;
-          break;
-        }
-      }
-      if (headerRowIndex === -1) { showToast("Header row with 'Name' not found", true); return; }
-      const headers = headerRow.map(c => String(c || "").toLowerCase().trim());
-      const nameIdx = headers.findIndex(h => h.includes("name"));
-      // Qty column is optional
-      const qtyIdx = headers.findIndex(h => h.includes("qty") || h.includes("quantity"));
-      const expiryIdx = headers.findIndex(h => h.includes("expiry") || h.includes("expiry date"));
-      const barcodeIdx = headers.findIndex(h => h.includes("barcode"));
-      const priceIdx = headers.findIndex(h => h.includes("price") || h === "price" || h.includes("unit price"));
+            function populateCategoryDropdowns() {
+                const select = document.getElementById('productCategory');
+                const filterSelect = document.getElementById('categoryFilterSelect');
+                if (select) {
+                    select.innerHTML = '<option value="">Uncategorized</option>' + savedCategories.map(c =>
+                        `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+                    // Add custom option
+                    select.innerHTML += '<option value="__new__">+ Add New Category...</option>';
+                }
+                if (filterSelect) {
+                    const currentVal = filterSelect.value;
+                    filterSelect.innerHTML = '<option value="all">All Categories</option>' + savedCategories.map(c =>
+                        `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+                    filterSelect.value = currentVal;
+                    if (![...filterSelect.options].some(o => o.value === currentVal)) filterSelect.value = 'all';
+                }
+            }
 
-      if (nameIdx === -1) { showToast("Missing 'Name' column", true); return; }
+            function handleCategoryChange() {
+                const select = document.getElementById('productCategory');
+                if (select && select.value === '__new__') {
+                    const newCat = prompt('Enter new category name:');
+                    if (newCat && newCat.trim()) {
+                        const trimmed = newCat.trim();
+                        if (!savedCategories.includes(trimmed)) {
+                            savedCategories.push(trimmed);
+                            savedCategories.sort();
+                            saveCategories();
+                            populateCategoryDropdowns();
+                            select.value = trimmed;
+                            showToast(`Category "${trimmed}" added`);
+                        } else {
+                            select.value = trimmed;
+                        }
+                    } else {
+                        select.value = '';
+                    }
+                }
+            }
 
-      let maxNum = stockItems.length ? Math.max(...stockItems.map(i=>i.displayNumber), 0) : 0;
-      let newItems = [];
-      for (let i = headerRowIndex + 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.every(c => !c || String(c).trim() === "")) continue;
-        let name = row[nameIdx] ? String(row[nameIdx]).trim() : "";
-        if (!name) continue;
-        // Quantity: if column found, use it, else 0
-        let qty = qtyIdx !== -1 ? parseInt(row[qtyIdx]) : 0;
-        if (isNaN(qty) || qty < 0) qty = 0;
-        let barcode = (barcodeIdx !== -1 && row[barcodeIdx]) ? String(row[barcodeIdx]).trim() : null;
-        let price = 0;
-        if (priceIdx !== -1 && row[priceIdx] !== undefined && row[priceIdx] !== "") {
-          let p = parseFloat(String(row[priceIdx]).replace(/[^0-9.-]/g, ''));
-          price = isNaN(p) ? 0 : p;
-        }
-        let expiryVal = null;
-        if (expiryIdx !== -1 && row[expiryIdx]) expiryVal = parseAnyDateToInternal(row[expiryIdx]);
-        maxNum++;
-        newItems.push({
-          id: Date.now() + i + Math.floor(Math.random() * 10000),
-          displayNumber: maxNum,
-          name: name,
-          barcode: barcode,
-          quantity: qty,
-          price: price,
-          expiryDate: expiryVal
-        });
-      }
-      if (newItems.length === 0) { showToast("No valid rows", true); return; }
-      stockItems.push(...newItems);
-      reorderNumbers();
-      renderDataTable();
-      if (document.querySelector('[data-tab="analysis"].active')) renderAnalysisPanel();
-      showToast(`Imported ${newItems.length} items (Qty defaulted to 0 if missing)`, false);
-    };
-    reader.readAsArrayBuffer(file);
-  }
-  function triggerImport() { let inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls'; inp.onchange=e=>{ if(inp.files[0]) importExcelFile(inp.files[0]); }; inp.click(); }
-  function exportExcelData() {
-    if (!stockItems.length) { showToast("No data", true); return; }
-    const wsData = [["#", "Product Name", "Barcode", "Price (﷼)", "Expiry (DD/MM/YY)", "Status"]];
-    stockItems.forEach(item => {
-      const expiring = isExpiryiringSoon(item.expiryDate);
-      const status = expiring ? "EXPIRING" : (item.quantity === 0 ? "ZERO STOCK" : "OK");
-      wsData.push([
-        item.displayNumber, item.name, item.barcode || "",
-        (item.price ? parseFloat(item.price).toFixed(2) : "0.00"),
-        formatDisplayDate(item.expiryDate), status
-      ]);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{wch:5},{wch:22},{wch:15},{wch:10},{wch:18},{wch:12}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-    XLSX.writeFile(wb, `inventory_${Date.now()}.xlsx`);
-    showToast("Excel exported (no quantity)");
-  }
-  async function exportPdfData() {
-    if (!stockItems.length) { showToast("No data", true); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const headers = [["#", "Product Name", "Barcode", "Price (﷼)", "Expiry", "Status"]];
-    const body = stockItems.map(i => [
-      i.displayNumber, i.name, i.barcode || "",
-      (i.price ? parseFloat(i.price).toFixed(2) : "0.00"),
-      formatDisplayDate(i.expiryDate),
-      isExpiryiringSoon(i.expiryDate) ? "exp" : (i.quantity === 0 ? "No stock" : "ok")
-    ]);
-    const rowStyles = {};
-    stockItems.forEach((it, idx) => { if (isExpiryiringSoon(it.expiryDate)) rowStyles[idx] = { fillColor: [255, 204, 204] }; });
-    doc.autoTable({ head: headers, body: body, startY: 28, headStyles: { fillColor: [44,125,160], textColor: 255 }, rowStyles: rowStyles, margin: { left: 10, right: 10 } });
-    doc.save(`stock_report_${Date.now()}.pdf`);
-    showToast("PDF exported (no quantity)");
-  }
+            // ========== CORE DATA ==========
+            function reorderNumbers() { for (let i = 0; i < stockItems.length; i++) stockItems[i].displayNumber = i + 1; }
 
-  // ========== COUNTING FUNCTIONS ==========
-  function persistCounting() {
-    localStorage.setItem(COUNTING_KEY, JSON.stringify(countingItems));
-  }
-  function loadCounting() {
-    const saved = localStorage.getItem(COUNTING_KEY);
-    if (saved) {
-      try {
-        countingItems = JSON.parse(saved);
-        if (!Array.isArray(countingItems)) countingItems = [];
-      } catch(e) { countingItems = []; }
-    } else {
-      countingItems = [];
-    }
-    renderCountingTable();
-  }
-  function renderCountingTable() {
-    const tbody = document.getElementById("countingTableBody");
-    if (countingItems.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4">No counting entries yet</td></tr>`;
-      return;
-    }
-    const sorted = [...countingItems].sort((a,b) => a.name.localeCompare(b.name));
-    let html = "";
-    sorted.forEach(item => {
-      html += `<tr data-id="${item.id}">
-        <td>${escapeHtml(item.name)}</td>
-        <td><span style="font-family:monospace;">${escapeHtml(item.barcode) || "—"}</span></td>
-        <td>${item.quantity}</td>
-        <td>
-          <button class="edit-count-btn" data-id="${item.id}">Edit</button>
-          <button class="delete-count-btn danger" data-id="${item.id}">Del</button>
-        </td>
-      </tr>`;
-    });
-    tbody.innerHTML = html;
-  }
-  function addOrUpdateCountingItem() {
-    const name = document.getElementById("countProductName").value.trim();
-    const barcode = document.getElementById("countBarcode").value.trim();
-    const quantity = parseInt(document.getElementById("countQuantity").value) || 0;
-    if (!name) { showToast("Select a product name", true); return; }
-    if (!barcode) { showToast("Barcode is required (auto-filled)", true); return; }
-    const idx = countingItems.findIndex(c => c.name === name && c.barcode === barcode);
-    if (idx !== -1) {
-      countingItems[idx].quantity = quantity;
-      showToast("Count updated");
-    } else {
-      countingItems.push({
-        id: Date.now() + Math.floor(Math.random() * 10000),
-        name: name,
-        barcode: barcode,
-        quantity: quantity
-      });
-      showToast("Added to count list");
-    }
-    persistCounting();
-    renderCountingTable();
-    clearCountingForm();
-  }
-  function deleteCountingItem(id) {
-    countingItems = countingItems.filter(c => c.id !== id);
-    persistCounting();
-    renderCountingTable();
-    showToast("Removed");
-  }
-  function editCountingItem(id) {
-    const item = countingItems.find(c => c.id === id);
-    if (!item) return;
-    document.getElementById("countProductName").value = item.name;
-    document.getElementById("countBarcode").value = item.barcode;
-    document.getElementById("countQuantity").value = item.quantity;
-  }
-  function cleanAllQuantities() {
-    if (!countingItems.length) { showToast("Nothing to clean", true); return; }
-    if (confirm("Set all counting quantities to 0?")) {
-      countingItems.forEach(c => c.quantity = 0);
-      persistCounting();
-      renderCountingTable();
-      showToast("All quantities set to 0");
-    }
-  }
-  function deleteAllCounting() {
-    if (!countingItems.length) { showToast("No entries", true); return; }
-    if (confirm("Delete ALL counting entries?")) {
-      countingItems = [];
-      persistCounting();
-      renderCountingTable();
-      showToast("Cleared");
-    }
-  }
-  function clearCountingForm() {
-    document.getElementById("countProductName").value = "";
-    document.getElementById("countBarcode").value = "";
-    document.getElementById("countQuantity").value = "0";
-  }
-  function populateCountNameList() {
-    const list = document.getElementById("countNameList");
-    if (!list) return;
-    const uniqueNames = [...new Set(stockItems.map(i => i.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-    list.innerHTML = uniqueNames.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
-  }
-  function autoFillBarcodeForCounting() {
-    const name = document.getElementById("countProductName").value.trim();
-    const match = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
-    if (match) {
-      document.getElementById("countBarcode").value = match.barcode || "";
-    } else {
-      document.getElementById("countBarcode").value = "";
-    }
-  }
+            function getNextNum() { return stockItems.length ? Math.max(...stockItems.map(i => i.displayNumber)) + 1 : 1; }
 
-  // ========== COUNTING EXPORTS ==========
-  function exportCountingExcel() {
-    if (!countingItems.length) { showToast("No counting data", true); return; }
-    const sorted = [...countingItems].sort((a,b) => a.name.localeCompare(b.name));
-    const wsData = [["Name", "Barcode", "Quantity"]];
-    sorted.forEach(item => wsData.push([item.name, item.barcode || "", item.quantity]));
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{wch:25},{wch:20},{wch:10}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Counting");
-    XLSX.writeFile(wb, `counting_${Date.now()}.xlsx`);
-    showToast("Counting Excel exported (A‑Z)");
-  }
-  async function exportCountingPdf() {
-    if (!countingItems.length) { showToast("No counting data", true); return; }
-    const sorted = [...countingItems].sort((a,b) => a.name.localeCompare(b.name));
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const headers = [["Name", "Barcode", "Quantity"]];
-    const body = sorted.map(i => [i.name, i.barcode || "", String(i.quantity)]);
-    doc.autoTable({ head: headers, body: body, startY: 25, headStyles: { fillColor: [31,110,140], textColor: 255 }, margin: { left: 15, right: 15 } });
-    doc.save(`counting_${Date.now()}.pdf`);
-    showToast("Counting PDF exported (A‑Z)");
-  }
+            function calcTotalValue() {
+                return stockItems.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
+            }
 
-  // ========== LABEL FUNCTIONS ==========
-  async function generateBarcodeDataURL(code, width=1.7, height=38) {
-    return new Promise(resolve => {
-      const canvas = document.createElement('canvas');
-      try {
-        JsBarcode(canvas, code, { format: "CODE128", displayValue: true, fontSize: 9, height, width });
-        resolve(canvas.toDataURL());
-      } catch(e) {
-        const dummy = document.createElement('canvas');
-        dummy.width = 150; dummy.height = 40;
-        dummy.getContext('2d').fillText("error", 10, 20);
-        resolve(dummy.toDataURL());
-      }
-    });
-  }
-  async function generateBatchPDF(itemsArray, filename = "labels") {
-    if (!itemsArray.length) { showToast("No items", true); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const margin = 5, cols = 5;
-    const labelW = (210 - margin * 2) / cols;
-    const labelH = 32;
-    let idx = 0;
-    for (let i = 0; i < itemsArray.length; i++) {
-      const item = itemsArray[i];
-      const col = idx % cols;
-      const row = Math.floor(idx / cols) % 7;
-      if (col === 0 && row === 0 && idx !== 0) doc.addPage();
-      const x = margin + col * labelW;
-      const y = margin + row * labelH;
-      if (y + labelH > 297) { doc.addPage(); idx = 0; continue; }
-      doc.rect(x, y, labelW-1, labelH-2, 'S');
-      doc.setFontSize(9); doc.setTextColor(30,70,110); doc.text(item.name.substring(0,28), x+2, y+5);
-      doc.setFontSize(8); doc.setTextColor(60,100,130); doc.text(`﷼${(item.price||0).toFixed(2)}`, x+2, y+12);
-      const barcodeImg = await generateBarcodeDataURL(item.barcode || `ID${item.id}`, 1.6, 20);
-      if (barcodeImg) doc.addImage(barcodeImg, 'PNG', x+2, y+16, labelW-8, 7);
-      doc.setFontSize(6); doc.setTextColor(80,100,120); doc.text(item.barcode || "---", x+2, y+27);
-      idx++;
-    }
-    doc.save(`${filename}_${Date.now()}.pdf`);
-    showToast(`✅ PDF with ${itemsArray.length} labels (5 per row)`);
-  }
-  async function printBatchHTML(itemsArray) {
-    if (!itemsArray.length) return;
-    let labelsHtml = [];
-    for (let it of itemsArray) {
-      const barcodeImg = await generateBarcodeDataURL(it.barcode || `ID${it.id}`, 2, 35);
-      labelsHtml.push(`<div style="border:1px solid #1f6e8c; border-radius:12px; padding:8px; margin:5px; width:calc(20% - 10px); box-sizing:border-box; background:white; break-inside:avoid; page-break-inside:avoid;"><div style="font-weight:bold; font-size:0.9rem;">${escapeHtml(it.name)}</div><div style="font-size:0.8rem;">💰 ﷼${(it.price||0).toFixed(2)}</div><img src="${barcodeImg}" style="max-width:100%; height:auto; margin:4px 0;" /><div style="font-size:0.65rem;">${it.barcode || ""}</div></div>`);
-    }
-    const win = window.open("", "_blank");
-    if (!win) { showToast("Popup blocked! Allow popups.", true); return; }
-    win.document.write(`<html><head><title>Batch Labels 5/row</title><style>body{font-family:sans-serif; padding:10px;} .grid{display:flex; flex-wrap:wrap; gap:5px;} @media print{body{margin:0; padding:5px;}}</style></head><body><div class="grid">${labelsHtml.join('')}</div></body></html>`);
-    win.document.close(); win.focus(); setTimeout(() => win.print(), 300);
-  }
-  async function renderSinglePreview() {
-    let n = document.getElementById("labelProductName").value.trim();
-    let b = document.getElementById("labelBarcode").value.trim();
-    let p = parseFloat(document.getElementById("labelPrice").value);
-    if (!n) { showToast("Product name required", true); return; }
-    if (!b) { showToast("Barcode required", true); return; }
-    document.getElementById("previewName").innerText = n;
-    document.getElementById("previewPrice").innerHTML = `﷼${p.toFixed(2)}`;
-    document.getElementById("previewBarcodeText").innerText = b;
-    const svg = document.getElementById("labelBarcodeSvg"); svg.innerHTML = "";
-    JsBarcode(svg, b, { format: "CODE128", displayValue: true, fontSize: 12, height: 60 });
-    document.getElementById("labelPreview").classList.remove("hidden");
-  }
-  function populateLabelNameList() {
-    const list = document.getElementById("labelNameList");
-    if (!list) return;
-    const uniqueNames = [...new Set(stockItems.map(i => i.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-    list.innerHTML = uniqueNames.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
-  }
-  function syncLabelFieldsByName() {
-    const name = document.getElementById("labelProductName").value.trim();
-    if (!name) return;
-    const match = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
-    if (match) {
-      document.getElementById("labelBarcode").value = match.barcode || "";
-      document.getElementById("labelPrice").value = (match.price !== undefined && match.price !== null) ? match.price : "0.00";
-    }
-  }
-  async function printSingleLabels() {
-    let n = document.getElementById("labelProductName").value.trim();
-    let b = document.getElementById("labelBarcode").value.trim();
-    let p = parseFloat(document.getElementById("labelPrice").value);
-    let copies = Math.min(parseInt(document.getElementById("labelCount").value) || 1, 30);
-    if (!n || !b) { showToast("Fill name & barcode", true); return; }
-    const items = Array(copies).fill({ name: n, barcode: b, price: p });
-    await printBatchHTML(items);
-  }
-  async function downloadSinglePDF() {
-    let n = document.getElementById("labelProductName").value.trim();
-    let b = document.getElementById("labelBarcode").value.trim();
-    let p = parseFloat(document.getElementById("labelPrice").value);
-    let copies = Math.min(parseInt(document.getElementById("labelCount").value) || 1, 30);
-    if (!n || !b) { showToast("Fill all fields", true); return; }
-    const items = Array(copies).fill({ name: n, barcode: b, price: p });
-    await generateBatchPDF(items, "single_label");
-  }
-  function resetLabelUI() {
-    document.getElementById("labelProductName").value = "";
-    document.getElementById("labelBarcode").value = "";
-    document.getElementById("labelPrice").value = "0.00";
-    document.getElementById("labelCount").value = "1";
-    document.getElementById("labelPreview").classList.add("hidden");
-  }
-  function prefillLabelFromItem(id) {
-    const it = stockItems.find(i => i.id === id);
-    if (it) {
-      document.getElementById("labelProductName").value = it.name;
-      document.getElementById("labelBarcode").value = it.barcode || "";
-      document.getElementById("labelPrice").value = it.price || 0;
-      document.querySelector('[data-tab="labels"]').click();
-      renderSinglePreview();
-      showToast("Loaded to label maker");
-    }
-  }
+            function updateGlobalStats() {
+                document.getElementById("totalItemsStat").innerText = stockItems.length;
+                const totalQ = stockItems.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+                document.getElementById("totalQtyStat").innerText = totalQ;
+                document.getElementById("totalValueStat").innerText = `﷼${calcTotalValue().toFixed(2)}`;
+            }
 
-  // ========== LOAD INITIAL DATA ==========
-  function loadInitial() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        let parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length) {
-          stockItems = parsed.map(p => ({ ...p, quantity: p.quantity ?? 0, price: (p.price !== undefined) ? p.price : null }));
-          reorderNumbers();
-          renderDataTable();
-          loadCounting();
-          showToast(`Loaded ${stockItems.length} items`);
-          return;
-        }
-      } catch(e) {}
-    }
-    const demo = [
-      { id:1001, displayNumber:1, name:"Organic Milk", barcode:"890123", quantity:5, price:3.49, expiryDate:"2025-06-15" },
-      { id:1002, displayNumber:2, name:"Sourdough", barcode:"400638", quantity:0, price:4.99, expiryDate:"2025-12-01" },
-      { id:1003, displayNumber:3, name:"Canned Beans", barcode:"376012", quantity:24, price:1.29, expiryDate:null }
-    ];
-    stockItems = demo;
-    reorderNumbers();
-    renderDataTable();
-    loadCounting();
-  }
+            function updateAllStats() {
+                updateGlobalStats();
+                renderDashboardStats();
+                if (document.querySelector('[data-tab="analysis"].active-panel')) renderAnalysisPanel();
+            }
 
-  // ========== INIT TABS ==========
-  function initTabs() {
-    const btns = document.querySelectorAll(".tab-btn");
-    const panels = {
-      entry: document.getElementById("entryPanel"),
-      data: document.getElementById("dataPanel"),
-      analysis: document.getElementById("analysisPanel"),
-      labels: document.getElementById("labelsPanel"),
-      counting: document.getElementById("countingPanel")
-    };
-    btns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        const tabId = btn.getAttribute("data-tab");
-        btns.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        Object.values(panels).forEach(p => p.classList.remove("active-panel"));
-        if (tabId === "entry") panels.entry.classList.add("active-panel");
-        if (tabId === "data") { panels.data.classList.add("active-panel"); renderDataTable(); }
-        if (tabId === "analysis") { panels.analysis.classList.add("active-panel"); renderAnalysisPanel(); }
-        if (tabId === "labels") panels.labels.classList.add("active-panel");
-        if (tabId === "counting") { panels.counting.classList.add("active-panel"); populateCountNameList(); }
-        if (tabId !== "entry") stopScanner();
-      });
-    });
-  }
+            function persist() {
+                const toStore = stockItems.map(({ id, displayNumber, name, barcode, quantity, expiryDate, price, category,
+                    supplier, notes, createdAt, updatedAt }) => ({ id, displayNumber, name, barcode: barcode || null,
+                    quantity, expiryDate, price: price !== undefined ? price : null, category: category ||
+                        'Uncategorized', supplier: supplier || null, notes: notes || null, createdAt: createdAt ||
+                        new Date().toISOString(), updatedAt: new Date().toISOString() }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+                updateAllStats();
+                updateLastModified();
+            }
 
-  // ========== EVENT BINDINGS ==========
-  document.addEventListener("DOMContentLoaded", () => {
-    loadInitial();
-    initTabs();
+            function getFilteredSorted() {
+                let filtered = stockItems.filter(i => {
+                    const matchesSearch = !currentSearch || i.name.toLowerCase().includes(currentSearch) || (
+                        i.barcode && i.barcode.toLowerCase().includes(currentSearch));
+                    const matchesCategory = currentCategoryFilter === 'all' || (i.category || 'Uncategorized') ===
+                        currentCategoryFilter;
+                    return matchesSearch && matchesCategory;
+                });
+                if (currentSort === "name_asc") filtered.sort((a, b) => a.name.localeCompare(b.name));
+                else if (currentSort === "price_asc") filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+                else if (currentSort === "price_desc") filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+                else if (currentSort === "expiry_asc") filtered.sort((a, b) => (a.expiryDate || "9999-12-31").localeCompare(
+                    b.expiryDate || "9999-12-31"));
+                else if (currentSort === "category_asc") filtered.sort((a, b) => (a.category || 'Uncategorized')
+                    .localeCompare(b.category || 'Uncategorized'));
+                else filtered.sort((a, b) => (a.displayNumber || 0) - (b.displayNumber || 0));
+                return filtered;
+            }
 
-    document.getElementById("addUpdateBtn").addEventListener("click", addOrUpdateItem);
-    document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
-    document.getElementById("deleteAllBtn").addEventListener("click", deleteAllItems);
-    document.getElementById("saveDataBtn").addEventListener("click", () => { persist(); showToast("Manual save"); });
-    document.getElementById("importExcelBtn").addEventListener("click", triggerImport);
-    document.getElementById("exportExcelBtn").addEventListener("click", exportExcelData);
-    document.getElementById("exportPdfBtn").addEventListener("click", exportPdfData);
-    document.getElementById("refreshAnalysisBtn").addEventListener("click", renderAnalysisPanel);
+            // ========== RENDER DATA TABLE ==========
+            function renderDataTable() {
+                const tbody = document.getElementById("tableBody");
+                const filtered = getFilteredSorted();
+                const qtyHeaders = document.querySelectorAll('.qty-col-header');
+                qtyHeaders.forEach(h => h.classList.toggle('hidden', !showQtyCol));
 
-    document.getElementById("searchInputData").addEventListener("input", (e) => { currentSearch = e.target.value.toLowerCase(); renderDataTable(); });
-    document.getElementById("sortBySelect").addEventListener("change", (e) => { currentSort = e.target.value; renderDataTable(); });
+                if (filtered.length === 0) {
+                    tbody.innerHTML =
+                        `<tr><td colspan="10">No items match. Add products or adjust filters.</td></tr>`;
+                    persist();
+                    return;
+                }
+                let html = "";
+                filtered.forEach(item => {
+                    const expiryiring = isExpiryiringSoon(item.expiryDate);
+                    const rowClass = expiryiring ? "expiryiring-row" : "";
+                    const expiryDisplay = formatDisplayDate(item.expiryDate);
+                    let statusBadge = "";
+                    if (expiryiring) statusBadge = `<span class="expiryiring-badge">exp</span>`;
+                    else if ((Number(item.quantity) || 0) === 0) statusBadge =
+                        `<span class="zero-qty-badge">No stock</span>`;
+                    else if ((Number(item.quantity) || 0) <= lowStockThreshold) statusBadge =
+                        `<span style="background:#fff0db;color:#b45f1b;font-size:0.6rem;border-radius:20px;padding:0.15rem 0.5rem;">Low</span>`;
+                    else statusBadge = "✓";
+                    const priceValue = (item.price && !isNaN(item.price)) ? parseFloat(item.price).toFixed(2) : "0.00";
+                    const cat = item.category || 'Uncategorized';
+                    const qtyCol = showQtyCol ? `<td>${item.quantity}</td>` : '';
+                    html += `<tr class="${rowClass}" data-id="${item.id}">
+                <td class="checkbox-col"><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>
+                <td>${item.displayNumber}</td>
+                <td>${escapeHtml(item.name)}</td>
+                <td><span style="font-family:monospace;">${item.barcode ? escapeHtml(item.barcode) : "—"}</span></td>
+                ${qtyCol}
+                <td>﷼${priceValue}</td>
+                <td><span class="category-chip">${escapeHtml(cat)}</span></td>
+                <td>${expiryDisplay}</td>
+                <td>${statusBadge}</td>
+                <td class="action-cell">
+                  <button class="edit-btn" data-id="${item.id}">Edit</button>
+                  <button class="delete-btn danger" data-id="${item.id}">Del</button>
+                  <button class="label-btn" data-id="${item.id}">🏷️</button>
+                </td>
+               </tr>`;
+                });
+                tbody.innerHTML = html;
+                populateLabelNameList();
+                updateBulkBar();
+                persist();
+            }
 
-    document.getElementById("tableBody").addEventListener("click", (e) => {
-      const btn = e.target.closest("button");
-      if (!btn) return;
-      const id = Number(btn.getAttribute("data-id"));
-      if (isNaN(id)) return;
-      if (btn.classList.contains("edit-btn")) startEdit(id);
-      if (btn.classList.contains("delete-btn")) deleteItemById(id);
-      if (btn.classList.contains("label-btn")) prefillLabelFromItem(id);
-    });
+            function resetForm() {
+                document.getElementById("productName").value = "";
+                document.getElementById("barcode").value = "";
+                document.getElementById("productQty").value = "1";
+                document.getElementById("productPrice").value = "0.00";
+                document.getElementById("expiryDate").value = "";
+                document.getElementById("itemNumberDisplay").value = "";
+                document.getElementById("productCategory").value = "";
+                document.getElementById("productSupplier").value = "";
+                document.getElementById("productNotes").value = "";
+                editMode = false;
+                editingId = null;
+                document.getElementById("addUpdateBtn").innerHTML = "➕ Add / Update";
+            }
 
-    document.getElementById("startScanBtn").addEventListener("click", startScanner);
-    document.getElementById("closeScannerBtn").addEventListener("click", stopScanner);
+            function addOrUpdateItem() {
+                let name = document.getElementById("productName").value.trim();
+                let barcode = document.getElementById("barcode").value.trim() || null;
+                let quantity = parseInt(document.getElementById("productQty").value);
+                let price = parseFloat(document.getElementById("productPrice").value);
+                let expiryInput = document.getElementById("expiryDate").value.trim();
+                let category = document.getElementById("productCategory").value;
+                let supplier = document.getElementById("productSupplier").value.trim() || null;
+                let notes = document.getElementById("productNotes").value.trim() || null;
+                if (!name) { showToast("Name required", true); return; }
+                if (isNaN(quantity)) quantity = 0;
+                if (quantity < 0) quantity = 0;
+                if (isNaN(price) || price < 0) price = 0;
+                let internalExpiry = expiryInput ? parseToInternalDate(expiryInput) : null;
+                if (expiryInput && !internalExpiry) { showToast("Invalid date (use DD/MM/YY)", true); return; }
+                if (category === '__new__') category = '';
+                if (!category) category = 'Uncategorized';
 
-    // Labels panel
-    document.getElementById("generateLabelBtn").addEventListener("click", renderSinglePreview);
-    document.getElementById("printLabelBtn").addEventListener("click", printSingleLabels);
-    document.getElementById("downloadPdfLabelBtn").addEventListener("click", downloadSinglePDF);
-    document.getElementById("resetLabelBtn").addEventListener("click", resetLabelUI);
-    document.getElementById("labelProductName").addEventListener("input", syncLabelFieldsByName);
-    document.getElementById("batchPdfAllBtn").addEventListener("click", async () => {
-      if (stockItems.length) await generateBatchPDF([...stockItems], "all_items");
-      else showToast("No items", true);
-    });
-    document.getElementById("batchPrintAllBtn").addEventListener("click", async () => {
-      if (stockItems.length) await printBatchHTML(stockItems);
-      else showToast("No items", true);
-    });
+                if (editMode && editingId !== null) {
+                    const idx = stockItems.findIndex(i => i.id === editingId);
+                    if (idx !== -1) {
+                        stockItems[idx] = { ...stockItems[idx], name, barcode: barcode || null, quantity, price,
+                            expiryDate: internalExpiry, category, supplier, notes, updatedAt: new Date()
+                            .toISOString() };
+                        showToast("Item updated ✅");
+                        logActivity("Updated", name);
+                        resetForm();
+                        renderDataTable();
+                        if (document.querySelector('[data-tab="analysis"].active-panel')) renderAnalysisPanel();
+                        return;
+                    }
+                } else {
+                    const newId = Date.now() + Math.floor(Math.random() * 10000);
+                    const newNum = getNextNum();
+                    stockItems.push({ id: newId, displayNumber: newNum, name, barcode: barcode || null, quantity,
+                        price: price, expiryDate: internalExpiry, category, supplier, notes, createdAt: new Date()
+                            .toISOString(), updatedAt: new Date().toISOString() });
+                    showToast("Item added ✅");
+                    logActivity("Added", name);
+                    resetForm();
+                    renderDataTable();
+                    if (document.querySelector('[data-tab="analysis"].active-panel')) renderAnalysisPanel();
+                }
+            }
 
-    // Counting panel
-    document.getElementById("addCountBtn").addEventListener("click", addOrUpdateCountingItem);
-    document.getElementById("clearCountFormBtn").addEventListener("click", clearCountingForm);
-    document.getElementById("cleanQuantityBtn").addEventListener("click", cleanAllQuantities);
-    document.getElementById("deleteAllCountBtn").addEventListener("click", deleteAllCounting);
-    document.getElementById("exportCountExcelBtn").addEventListener("click", exportCountingExcel);
-    document.getElementById("exportCountPdfBtn").addEventListener("click", exportCountingPdf);
-    document.getElementById("countProductName").addEventListener("input", autoFillBarcodeForCounting);
-    document.getElementById("countingTableBody").addEventListener("click", (e) => {
-      const btn = e.target.closest("button");
-      if (!btn) return;
-      const id = Number(btn.getAttribute("data-id"));
-      if (isNaN(id)) return;
-      if (btn.classList.contains("edit-count-btn")) editCountingItem(id);
-      if (btn.classList.contains("delete-count-btn")) deleteCountingItem(id);
-    });
+            function deleteItemById(id) {
+                const item = stockItems.find(i => i.id === id);
+                if (!item) return;
+                if (confirm(`Delete "${item.name}"?`)) {
+                    stockItems = stockItems.filter(i => i.id !== id);
+                    reorderNumbers();
+                    if (editMode && editingId === id) resetForm();
+                    renderDataTable();
+                    showToast("Deleted");
+                    logActivity("Deleted", item.name);
+                    if (document.querySelector('[data-tab="analysis"].active-panel')) renderAnalysisPanel();
+                }
+            }
 
-    document.body.addEventListener("click", () => { if(audioCtx && audioCtx.state === "suspended") audioCtx.resume(); }, { once: true });
-  });
-</script>
+            function deleteAllItems() {
+                if (stockItems.length === 0) return showToast("Nothing to delete", true);
+                if (confirm("DELETE ALL ITEMS? This cannot be undone!")) {
+                    stockItems = [];
+                    resetForm();
+                    renderDataTable();
+                    showToast("All items cleared");
+                    logActivity("Deleted All", `${stockItems.length} items`);
+                    if (document.querySelector('[data-tab="analysis"].active-panel')) renderAnalysisPanel();
+                }
+            }
+
+            function startEdit(id) {
+                const item = stockItems.find(i => i.id === id);
+                if (!item) return;
+                document.getElementById("itemNumberDisplay").value = item.displayNumber;
+                document.getElementById("productName").value = item.name;
+                document.getElementById("barcode").value = item.barcode || "";
+                document.getElementById("productQty").value = item.quantity;
+                document.getElementById("productPrice").value = (item.price !== undefined && item.price !== null) ? item
+                    .price : 0;
+                document.getElementById("expiryDate").value = item.expiryDate ? formatDisplayDate(item.expiryDate) : "";
+                document.getElementById("productCategory").value = item.category || '';
+                document.getElementById("productSupplier").value = item.supplier || '';
+                document.getElementById("productNotes").value = item.notes || '';
+                editMode = true;
+                editingId = item.id;
+                document.getElementById("addUpdateBtn").innerHTML = "✏️ Update Stock";
+                document.querySelector('[data-tab="entry"]').click();
+                showToast("Edit mode active");
+            }
+
+            // ========== BULK ACTIONS ==========
+            function getSelectedIds() {
+                const checkboxes = document.querySelectorAll('#tableBody .row-checkbox:checked');
+                return Array.from(checkboxes).map(cb => Number(cb.getAttribute('data-id')));
+            }
+
+            function updateBulkBar() {
+                const bar = document.getElementById('bulkActionBar');
+                const countText = document.getElementById('bulkCountText');
+                const selected = getSelectedIds();
+                if (selected.length > 0) {
+                    bar.classList.remove('hidden');
+                    countText.textContent = `${selected.length} selected`;
+                } else {
+                    bar.classList.add('hidden');
+                    document.getElementById('selectAllCheckbox').checked = false;
+                }
+            }
+
+            function bulkDelete() {
+                const ids = getSelectedIds();
+                if (ids.length === 0) return showToast("No items selected", true);
+                if (confirm(`Delete ${ids.length} selected items?`)) {
+                    stockItems = stockItems.filter(i => !ids.includes(i.id));
+                    reorderNumbers();
+                    renderDataTable();
+                    showToast(`Deleted ${ids.length} items`);
+                    logActivity("Bulk Deleted", `${ids.length} items`);
+                    if (document.querySelector('[data-tab="analysis"].active-panel')) renderAnalysisPanel();
+                }
+            }
+
+            function clearBulkSelection() {
+                document.querySelectorAll('#tableBody .row-checkbox:checked').forEach(cb => cb.checked = false);
+                document.getElementById('selectAllCheckbox').checked = false;
+                updateBulkBar();
+            }
+
+            function toggleSelectAll() {
+                const masterCheckbox = document.getElementById('selectAllCheckbox');
+                const allCbs = document.querySelectorAll('#tableBody .row-checkbox');
+                allCbs.forEach(cb => cb.checked = masterCheckbox.checked);
+                updateBulkBar();
+            }
+
+            // ========== BARCODE SCANNER ==========
+            async function stopScanner() {
+                if (html5QrCode && scannerActive) { try { await html5QrCode.stop(); } catch (e) {} scannerActive = false; }
+                document.getElementById("scannerWrapper").classList.add("hidden");
+                if (html5QrCode) { try { html5QrCode.clear(); } catch (e) {} html5QrCode = null; }
+            }
+
+            async function requestCameraPermission() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showToast("Camera not supported in this browser.", true);
+                    return false;
+                }
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    return true;
+                } catch (err) {
+                    showToast("Camera access denied. Allow permission and try again.", true);
+                    return false;
+                }
+            }
+
+            async function startScanner() {
+                const allowed = await requestCameraPermission();
+                if (!allowed) return;
+                await stopScanner();
+                const wrapper = document.getElementById("scannerWrapper");
+                wrapper.classList.remove("hidden");
+                const readerDiv = document.getElementById("qr-reader");
+                readerDiv.innerHTML = "";
+                if (!window.Html5Qrcode) { showToast("QR scanner library not loaded.", true);
+                    wrapper.classList.add("hidden"); return; }
+                html5QrCode = new Html5Qrcode("qr-reader");
+                const config = { fps: 10, qrbox: { width: 250, height: 200 } };
+                try {
+                    const cameras = await Html5Qrcode.getCameras();
+                    let cameraId = null;
+                    if (cameras && cameras.length) {
+                        const backCam = cameras.find(cam => cam.label.toLowerCase().includes('back') || cam.label
+                            .toLowerCase().includes('rear'));
+                        cameraId = backCam ? backCam.id : cameras[0].id;
+                    }
+                    scannerActive = true;
+                    await html5QrCode.start(cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
+                        config, (decodedText) => {
+                            document.getElementById("barcode").value = decodedText;
+                            showToast(`✅ Scanned: ${decodedText}`);
+                            stopScanner();
+                            playBeep("success");
+                        }, (errMsg) => { /* ignore */ });
+                } catch (err) {
+                    console.error(err);
+                    showToast("Camera error: " + (err.message || ""), true);
+                    wrapper.classList.add("hidden");
+                    scannerActive = false;
+                }
+            }
+
+            // ========== DASHBOARD ==========
+            function renderDashboardStats() {
+                const totalItems = stockItems.length;
+                const totalQty = stockItems.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+                const totalValue = calcTotalValue();
+                const lowStockCount = stockItems.filter(i => (Number(i.quantity) || 0) > 0 && (Number(i.quantity) || 0) <=
+                    lowStockThreshold).length;
+                const expirySoonCount = stockItems.filter(i => isExpiryiringSoon(i.expiryDate)).length;
+                const categories = new Set(stockItems.map(i => i.category || 'Uncategorized'));
+                document.getElementById("dashTotalItems").innerText = totalItems;
+                document.getElementById("dashTotalQty").innerText = totalQty;
+                document.getElementById("dashTotalValue").innerHTML = `﷼${totalValue.toFixed(2)}`;
+                document.getElementById("dashLowStock").innerText = lowStockCount;
+                document.getElementById("dashExpirySoon").innerText = expirySoonCount;
+                document.getElementById("dashCategories").innerText = categories.size;
+                renderDashboardChart();
+            }
+
+            function renderDashboardChart() {
+                const canvas = document.getElementById('dashboardChart');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = 250 * dpr;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = '250px';
+                ctx.scale(dpr, dpr);
+                const w = rect.width;
+                const h = 250;
+                ctx.clearRect(0, 0, w, h);
+
+                const catValues = {};
+                stockItems.forEach(i => {
+                    const cat = i.category || 'Uncategorized';
+                    catValues[cat] = (catValues[cat] || 0) + ((Number(i.quantity) || 0) * (Number(i.price) || 0));
+                });
+                const sorted = Object.entries(catValues).sort((a, b) => b[1] - a[1]).slice(0, 8);
+                if (sorted.length === 0) {
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
+                    ctx.font = '14px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No data to chart yet', w / 2, h / 2);
+                    return;
+                }
+                const maxVal = Math.max(...sorted.map(s => s[1]), 1);
+                const barH = Math.min(28, (h - 60) / sorted.length);
+                const startY = 30;
+                const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() ||
+                    '#1f6e8c';
+                const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#1f3b4c';
+
+                sorted.forEach((entry, idx) => {
+                    const y = startY + idx * (barH + 8);
+                    const barW = (entry[1] / maxVal) * (w - 160);
+                    ctx.fillStyle = primaryColor;
+                    ctx.globalAlpha = 0.85;
+                    ctx.beginPath();
+                    ctx.roundRect(100, y, Math.max(barW, 4), barH, 8);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 11px Inter, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(entry[0].substring(0, 15), 94, y + barH / 2 + 4);
+                    ctx.fillStyle = textColor;
+                    ctx.font = '10px Inter, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`﷼${entry[1].toFixed(0)}`, 106 + Math.max(barW, 4), y + barH / 2 + 4);
+                });
+            }
+
+            // ========== ANALYSIS ==========
+            function renderAnalysisPanel() {
+                const totalItems = stockItems.length;
+                const totalQty = stockItems.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+                const totalValue = calcTotalValue();
+                const expiryiringItems = stockItems.filter(i => isExpiryiringSoon(i.expiryDate));
+                const zeroQtyItems = stockItems.filter(i => (Number(i.quantity) === 0));
+                const lowStockItems = stockItems.filter(i => (Number(i.quantity) || 0) > 0 && (Number(i.quantity) || 0) <=
+                    lowStockThreshold);
+                document.getElementById("analTotalItems").innerText = totalItems;
+                document.getElementById("analTotalQty").innerText = totalQty;
+                document.getElementById("analTotalValue").innerHTML = `﷼${totalValue.toFixed(2)}`;
+                document.getElementById("analLowStockCount").innerText = lowStockItems.length;
+                document.getElementById("analExpiryiringCount").innerText = expiryiringItems.length;
+                document.getElementById("analZeroQtyCount").innerText = zeroQtyItems.length;
+
+                const expiryUl = document.getElementById("expiryiringList");
+                expiryUl.innerHTML = expiryiringItems.length ? expiryiringItems.map(i =>
+                    `<li style="margin-bottom:5px;"><strong>${escapeHtml(i.name)}</strong> (exp: ${formatDisplayDate(i.expiryDate)}) qty:${i.quantity}</li>`
+                    ).join('') : "<li>✅ No items expiring soon.</li>";
+
+                const allLowZero = [...lowStockItems, ...zeroQtyItems.filter(i => !lowStockItems.includes(i))];
+                const zeroUl = document.getElementById("zeroStockList");
+                zeroUl.innerHTML = allLowZero.length ? allLowZero.map(i =>
+                    `<li style="margin-bottom:5px;">${escapeHtml(i.name)} — <span style="font-family:monospace;">${i.barcode || "—"}</span> (qty: ${i.quantity})</li>`
+                    ).join('') : "<li>✅ All items adequately stocked.</li>";
+
+                const catBreakdown = {};
+                stockItems.forEach(i => {
+                    const cat = i.category || 'Uncategorized';
+                    if (!catBreakdown[cat]) catBreakdown[cat] = { count: 0, value: 0 };
+                    catBreakdown[cat].count++;
+                    catBreakdown[cat].value += (Number(i.quantity) || 0) * (Number(i.price) || 0);
+                });
+                const catUl = document.getElementById("categoryBreakdownList");
+                catUl.innerHTML = Object.entries(catBreakdown).sort((a, b) => b[1].value - a[1].value).map(([cat, data]) =>
+                    `<li style="margin-bottom:4px;"><span class="category-chip">${escapeHtml(cat)}</span> ${data.count} items · ﷼${data.value.toFixed(2)}</li>`
+                ).join('') || "<li>No categories</li>";
+            }
+
+            // ========== EXCEL IMPORT / EXPORT ==========
+            function parseAnyDateToInternal(value) {
+                if (!value || value === "") return null;
+                if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
+                if (typeof value === 'number') {
+                    const utc_days = value - 25569;
+                    const date = new Date(utc_days * 86400000);
+                    if (!isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+                    return null;
+                }
+                if (typeof value === 'string') {
+                    let trimmed = value.trim();
+                    let parts = trimmed.split("/");
+                    if (parts.length === 3) {
+                        let day = parts[0].padStart(2, '0');
+                        let month = parts[1].padStart(2, '0');
+                        let year = parts[2];
+                        if (year.length === 2) year = "20" + year;
+                        if (year.length === 4) {
+                            let testDate = new Date(`${year}-${month}-${day}`);
+                            if (!isNaN(testDate.getTime())) return `${year}-${month}-${day}`;
+                        }
+                    }
+                    let d = new Date(trimmed);
+                    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+                }
+                return null;
+            }
+
+            function importExcelFile(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                    if (!rows.length) { showToast("Empty file", true); return; }
+                    let headerRowIndex = -1,
+                        headerRow = null;
+                    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+                        const row = rows[i];
+                        if (!row) continue;
+                        const rowStr = row.map(c => String(c || "").toLowerCase()).join(" ");
+                        if (rowStr.includes("name") && (rowStr.includes("qty") || rowStr.includes("quantity") || rowStr
+                                .includes("price"))) { headerRowIndex = i;
+                            headerRow = row; break; }
+                    }
+                    if (headerRowIndex === -1) { showToast("Header row with 'Name' not found", true); return; }
+                    const headers = headerRow.map(c => String(c || "").toLowerCase().trim());
+                    const nameIdx = headers.findIndex(h => h.includes("name"));
+                    const qtyIdx = headers.findIndex(h => h.includes("qty") || h.includes("quantity"));
+                    const expiryIdx = headers.findIndex(h => h.includes("expiry") || h.includes("expiry date"));
+                    const barcodeIdx = headers.findIndex(h => h.includes("barcode"));
+                    const priceIdx = headers.findIndex(h => h.includes("price") || h === "price" || h.includes("unit price"));
+                    const catIdx = headers.findIndex(h => h.includes("categor"));
+                    const suppIdx = headers.findIndex(h => h.includes("supplier"));
+                    if (nameIdx === -1) { showToast("Missing 'Name' column", true); return; }
+                    let maxNum = stockItems.length ? Math.max(...stockItems.map(i => i.displayNumber), 0) : 0;
+                    let newItems = [];
+                    for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.every(c => !c || String(c).trim() === "")) continue;
+                        let name = row[nameIdx] ? String(row[nameIdx]).trim() : "";
+                        if (!name) continue;
+                        let qty = qtyIdx !== -1 ? parseInt(row[qtyIdx]) : 0;
+                        if (isNaN(qty) || qty < 0) qty = 0;
+                        let barcode = (barcodeIdx !== -1 && row[barcodeIdx]) ? String(row[barcodeIdx]).trim() : null;
+                        let price = 0;
+                        if (priceIdx !== -1 && row[priceIdx] !== undefined && row[priceIdx] !== "") {
+                            let p = parseFloat(String(row[priceIdx]).replace(/[^0-9.-]/g, ''));
+                            price = isNaN(p) ? 0 : p;
+                        }
+                        let expiryVal = null;
+                        if (expiryIdx !== -1 && row[expiryIdx]) expiryVal = parseAnyDateToInternal(row[expiryIdx]);
+                        let category = catIdx !== -1 && row[catIdx] ? String(row[catIdx]).trim() : 'Uncategorized';
+                        let supplier = suppIdx !== -1 && row[suppIdx] ? String(row[suppIdx]).trim() : null;
+                        maxNum++;
+                        newItems.push({
+                            id: Date.now() + i + Math.floor(Math.random() * 10000),
+                            displayNumber: maxNum,
+                            name,
+                            barcode,
+                            quantity: qty,
+                            price,
+                            expiryDate: expiryVal,
+                            category,
+                            supplier,
+                            notes: null,
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        });
+                    }
+                    if (newItems.length === 0) { showToast("No valid rows", true); return; }
+                    stockItems.push(...newItems);
+                    reorderNumbers();
+                    renderDataTable();
+                    if (document.querySelector('[data-tab="analysis"].active-panel')) renderAnalysisPanel();
+                    showToast(`Imported ${newItems.length} items`);
+                    logActivity("Imported Excel", `${newItems.length} items`);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            function triggerImport() { let inp = document.createElement('input');
+                inp.type = 'file';
+                inp.accept = '.xlsx,.xls';
+                inp.onchange = e => { if (inp.files[0]) importExcelFile(inp.files[0]); };
+                inp.click(); }
+
+            function exportExcelData() {
+                if (!stockItems.length) { showToast("No data", true); return; }
+                const wsData = [
+                    ["#", "Product Name", "Barcode", "Qty", "Price (﷼)", "Category", "Supplier", "Expiry (DD/MM/YY)",
+                        "Status", "Notes"
+                    ]
+                ];
+                stockItems.forEach(item => {
+                    const expiring = isExpiryiringSoon(item.expiryDate);
+                    const status = expiring ? "EXPIRING" : (item.quantity === 0 ? "ZERO STOCK" : (item.quantity <=
+                        lowStockThreshold ? "LOW" : "OK"));
+                    wsData.push([item.displayNumber, item.name, item.barcode || "", item.quantity, (item.price ?
+                            parseFloat(item.price).toFixed(2) : "0.00"), item.category || 'Uncategorized',
+                        item.supplier || "", formatDisplayDate(item.expiryDate), status, item.notes || ""
+                    ]);
+                });
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                ws['!cols'] = [{ wch: 5 }, { wch: 22 }, { wch: 15 }, { wch: 6 }, { wch: 10 }, { wch: 14 }, { wch: 14 },
+                { wch: 18 }, { wch: 10 }, { wch: 20 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+                XLSX.writeFile(wb, `inventory_${Date.now()}.xlsx`);
+                showToast("Excel exported");
+            }
+
+            async function exportPdfData() {
+                if (!stockItems.length) { showToast("No data", true); return; }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                const headers = [
+                    ["#", "Product Name", "Barcode", "Qty", "Price (﷼)", "Category", "Expiry", "Status"]
+                ];
+                const body = stockItems.map(i => [i.displayNumber, i.name, i.barcode || "", i.quantity, (i.price ? parseFloat(
+                    i.price).toFixed(2) : "0.00"), i.category || 'Uncategorized', formatDisplayDate(i.expiryDate),
+                    isExpiryiringSoon(i.expiryDate) ? "exp" : (i.quantity === 0 ? "No stock" : (i.quantity <=
+                        lowStockThreshold ? "Low" : "ok"))
+                ]);
+                const rowStyles = {};
+                stockItems.forEach((it, idx) => { if (isExpiryiringSoon(it.expiryDate)) rowStyles[idx] = { fillColor: [
+                        255, 204, 204] }; });
+                doc.autoTable({ head: headers, body: body, startY: 28, headStyles: { fillColor: [44, 125, 160],
+                        textColor: 255 }, rowStyles: rowStyles, margin: { left: 10, right: 10 } });
+                doc.save(`stock_report_${Date.now()}.pdf`);
+                showToast("PDF exported");
+            }
+
+            // ========== JSON BACKUP / RESTORE ==========
+            function jsonBackup() {
+                if (!stockItems.length) { showToast("No data to backup", true); return; }
+                const backup = {
+                    version: 3,
+                    date: new Date().toISOString(),
+                    items: stockItems.map(i => ({ ...i })),
+                    categories: savedCategories,
+                    countingItems: countingItems
+                };
+                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `stockflow_backup_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast("JSON backup downloaded ✅");
+            }
+
+            function jsonRestore() {
+                const inp = document.createElement('input');
+                inp.type = 'file';
+                inp.accept = '.json';
+                inp.onchange = e => {
+                    const file = inp.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                        try {
+                            const backup = JSON.parse(ev.target.result);
+                            if (!backup.items || !Array.isArray(backup.items)) throw new Error(
+                                'Invalid backup format');
+                            if (confirm(
+                                    `Restore ${backup.items.length} items from backup? This will replace current data.`
+                                    )) {
+                                stockItems = backup.items.map(i => ({ ...i, quantity: i.quantity ?? 0,
+                                    price: i.price ?? null, category: i.category || 'Uncategorized',
+                                    supplier: i.supplier || null, notes: i.notes || null,
+                                    createdAt: i.createdAt || new Date().toISOString(),
+                                    updatedAt: i.updatedAt || new Date().toISOString() }));
+                                if (backup.categories && Array.isArray(backup.categories)) savedCategories =
+                                    backup.categories;
+                                if (backup.countingItems && Array.isArray(backup.countingItems))
+                                    countingItems = backup.countingItems;
+                                reorderNumbers();
+                                saveCategories();
+                                populateCategoryDropdowns();
+                                renderDataTable();
+                                persistCounting();
+                                renderCountingTable();
+                                updateAllStats();
+                                persist();
+                                showToast(`Restored ${stockItems.length} items ✅`);
+                                logActivity("JSON Restore", `${stockItems.length} items restored`);
+                            }
+                        } catch (err) {
+                            showToast("Invalid backup file: " + err.message, true);
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                inp.click();
+            }
+
+            // ========== COUNTING FUNCTIONS ==========
+            function persistCounting() { localStorage.setItem(COUNTING_KEY, JSON.stringify(countingItems)); }
+
+            function loadCounting() {
+                const saved = localStorage.getItem(COUNTING_KEY);
+                if (saved) { try { countingItems = JSON.parse(saved); if (!Array.isArray(countingItems))
+                        countingItems = []; } catch (e) { countingItems = []; } } else countingItems = [];
+                renderCountingTable();
+            }
+
+            function renderCountingTable() {
+                const tbody = document.getElementById("countingTableBody");
+                if (countingItems.length === 0) { tbody.innerHTML =
+                    `<tr><td colspan="4">No counting entries yet</td></tr>`; return; }
+                const sorted = [...countingItems].sort((a, b) => a.name.localeCompare(b.name));
+                tbody.innerHTML = sorted.map(item => `<tr data-id="${item.id}">
+              <td>${escapeHtml(item.name)}</td><td><span style="font-family:monospace;">${escapeHtml(item.barcode) || "—"}</span></td>
+              <td>${item.quantity}</td>
+              <td><button class="edit-count-btn" data-id="${item.id}">Edit</button> <button class="delete-count-btn danger" data-id="${item.id}">Del</button></td>
+            </tr>`).join('');
+            }
+
+            function addOrUpdateCountingItem() {
+                const name = document.getElementById("countProductName").value.trim();
+                const barcode = document.getElementById("countBarcode").value.trim();
+                const quantity = parseInt(document.getElementById("countQuantity").value) || 0;
+                if (!name) { showToast("Select a product name", true); return; }
+                if (!barcode) { showToast("Barcode is required (auto-filled)", true); return; }
+                const idx = countingItems.findIndex(c => c.name === name && c.barcode === barcode);
+                if (idx !== -1) { countingItems[idx].quantity = quantity;
+                    showToast("Count updated"); } else { countingItems.push({ id: Date.now() + Math.floor(Math.random() *
+                        10000), name, barcode, quantity });
+                    showToast("Added to count list"); }
+                persistCounting();
+                renderCountingTable();
+                clearCountingForm();
+            }
+
+            function deleteCountingItem(id) { countingItems = countingItems.filter(c => c.id !== id);
+                persistCounting();
+                renderCountingTable();
+                showToast("Removed"); }
+
+            function editCountingItem(id) {
+                const item = countingItems.find(c => c.id === id);
+                if (!item) return;
+                document.getElementById("countProductName").value = item.name;
+                document.getElementById("countBarcode").value = item.barcode;
+                document.getElementById("countQuantity").value = item.quantity;
+            }
+
+            function cleanAllQuantities() {
+                if (!countingItems.length) { showToast("Nothing to clean", true); return; }
+                if (confirm("Set all counting quantities to 0?")) { countingItems.forEach(c => c.quantity = 0);
+                    persistCounting();
+                    renderCountingTable();
+                    showToast("All quantities set to 0"); }
+            }
+
+            function deleteAllCounting() {
+                if (!countingItems.length) { showToast("No entries", true); return; }
+                if (confirm("Delete ALL counting entries?")) { countingItems = [];
+                    persistCounting();
+                    renderCountingTable();
+                    showToast("Cleared"); }
+            }
+
+            function clearCountingForm() { document.getElementById("countProductName").value = "";
+                document.getElementById("countBarcode").value = "";
+                document.getElementById("countQuantity").value = "0"; }
+
+            function populateCountNameList() {
+                const list = document.getElementById("countNameList");
+                if (!list) return;
+                const uniqueNames = [...new Set(stockItems.map(i => i.name).filter(Boolean))].sort((a, b) => a.localeCompare(
+                    b));
+                list.innerHTML = uniqueNames.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+            }
+
+            function autoFillBarcodeForCounting() {
+                const name = document.getElementById("countProductName").value.trim();
+                const match = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
+                document.getElementById("countBarcode").value = match ? (match.barcode || "") : "";
+            }
+
+            function exportCountingExcel() {
+                if (!countingItems.length) { showToast("No counting data", true); return; }
+                const sorted = [...countingItems].sort((a, b) => a.name.localeCompare(b.name));
+                const wsData = [
+                    ["Name", "Barcode", "Quantity"]
+                ];
+                sorted.forEach(item => wsData.push([item.name, item.barcode || "", item.quantity]));
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                ws['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 10 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Counting");
+                XLSX.writeFile(wb, `counting_${Date.now()}.xlsx`);
+                showToast("Counting Excel exported (A‑Z)");
+            }
+
+            async function exportCountingPdf() {
+                if (!countingItems.length) { showToast("No counting data", true); return; }
+                const sorted = [...countingItems].sort((a, b) => a.name.localeCompare(b.name));
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const headers = [
+                    ["Name", "Barcode", "Quantity"]
+                ];
+                const body = sorted.map(i => [i.name, i.barcode || "", String(i.quantity)]);
+                doc.autoTable({ head: headers, body: body, startY: 25, headStyles: { fillColor: [31, 110, 140],
+                        textColor: 255 }, margin: { left: 15, right: 15 } });
+                doc.save(`counting_${Date.now()}.pdf`);
+                showToast("Counting PDF exported (A‑Z)");
+            }
+
+            // ========== LABEL FUNCTIONS ==========
+            async function generateBarcodeDataURL(code, width = 1.7, height = 38) {
+                return new Promise(resolve => {
+                    const canvas = document.createElement('canvas');
+                    try {
+                        JsBarcode(canvas, code, { format: "CODE128", displayValue: true, fontSize: 9, height,
+                            width });
+                        resolve(canvas.toDataURL());
+                    } catch (e) {
+                        const dummy = document.createElement('canvas');
+                        dummy.width = 150;
+                        dummy.height = 40;
+                        dummy.getContext('2d').fillText("error", 10, 20);
+                        resolve(dummy.toDataURL());
+                    }
+                });
+            }
+
+            async function generateBatchPDF(itemsArray, filename = "labels") {
+                if (!itemsArray.length) { showToast("No items", true); return; }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+                const margin = 5,
+                    cols = 5;
+                const labelW = (210 - margin * 2) / cols;
+                const labelH = 32;
+                let idx = 0;
+                for (let i = 0; i < itemsArray.length; i++) {
+                    const item = itemsArray[i];
+                    const col = idx % cols;
+                    const row = Math.floor(idx / cols) % 7;
+                    if (col === 0 && row === 0 && idx !== 0) doc.addPage();
+                    const x = margin + col * labelW;
+                    const y = margin + row * labelH;
+                    if (y + labelH > 297) { doc.addPage();
+                        idx = 0; continue; }
+                    doc.rect(x, y, labelW - 1, labelH - 2, 'S');
+                    doc.setFontSize(9);
+                    doc.setTextColor(30, 70, 110);
+                    doc.text(item.name.substring(0, 28), x + 2, y + 5);
+                    doc.setFontSize(8);
+                    doc.setTextColor(60, 100, 130);
+                    doc.text(`﷼${(item.price||0).toFixed(2)}`, x + 2, y + 12);
+                    const barcodeImg = await generateBarcodeDataURL(item.barcode || `ID${item.id}`, 1.6, 20);
+                    if (barcodeImg) doc.addImage(barcodeImg, 'PNG', x + 2, y + 16, labelW - 8, 7);
+                    doc.setFontSize(6);
+                    doc.setTextColor(80, 100, 120);
+                    doc.text(item.barcode || "---", x + 2, y + 27);
+                    idx++;
+                }
+                doc.save(`${filename}_${Date.now()}.pdf`);
+                showToast(`✅ PDF with ${itemsArray.length} labels (5 per row)`);
+            }
+
+            async function printBatchHTML(itemsArray) {
+                if (!itemsArray.length) return;
+                let labelsHtml = [];
+                for (let it of itemsArray) {
+                    const barcodeImg = await generateBarcodeDataURL(it.barcode || `ID${it.id}`, 2, 35);
+                    labelsHtml.push(
+                        `<div style="border:1px solid #1f6e8c;border-radius:12px;padding:8px;margin:5px;width:calc(20% - 10px);box-sizing:border-box;background:white;break-inside:avoid;page-break-inside:avoid;"><div style="font-weight:bold;font-size:0.9rem;">${escapeHtml(it.name)}</div><div style="font-size:0.8rem;">💰 ﷼${(it.price||0).toFixed(2)}</div><img src="${barcodeImg}" style="max-width:100%;height:auto;margin:4px 0;" /><div style="font-size:0.65rem;">${it.barcode||""}</div></div>`
+                        );
+                }
+                const win = window.open("", "_blank");
+                if (!win) { showToast("Popup blocked! Allow popups.", true); return; }
+                win.document.write(
+                    `<html><head><title>Batch Labels 5/row</title><style>body{font-family:sans-serif;padding:10px;}.grid{display:flex;flex-wrap:wrap;gap:5px;}@media print{body{margin:0;padding:5px;}}</style></head><body><div class="grid">${labelsHtml.join('')}</div></body></html>`
+                    );
+                win.document.close();
+                win.focus();
+                setTimeout(() => win.print(), 300);
+            }
+
+            async function renderSinglePreview() {
+                let n = document.getElementById("labelProductName").value.trim();
+                let b = document.getElementById("labelBarcode").value.trim();
+                let p = parseFloat(document.getElementById("labelPrice").value);
+                if (!n) { showToast("Product name required", true); return; }
+                if (!b) { showToast("Barcode required", true); return; }
+                document.getElementById("previewName").innerText = n;
+                document.getElementById("previewPrice").innerHTML = `﷼${p.toFixed(2)}`;
+                document.getElementById("previewBarcodeText").innerText = b;
+                const svg = document.getElementById("labelBarcodeSvg");
+                svg.innerHTML = "";
+                JsBarcode(svg, b, { format: "CODE128", displayValue: true, fontSize: 12, height: 60 });
+                document.getElementById("labelPreview").classList.remove("hidden");
+            }
+
+            function populateLabelNameList() {
+                const list = document.getElementById("labelNameList");
+                if (!list) return;
+                const uniqueNames = [...new Set(stockItems.map(i => i.name).filter(Boolean))].sort((a, b) => a.localeCompare(
+                    b));
+                list.innerHTML = uniqueNames.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+            }
+
+            function syncLabelFieldsByName() {
+                const name = document.getElementById("labelProductName").value.trim();
+                if (!name) return;
+                const match = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
+                if (match) {
+                    document.getElementById("labelBarcode").value = match.barcode || "";
+                    document.getElementById("labelPrice").value = (match.price !== undefined && match.price !== null) ?
+                        match.price : "0.00";
+                }
+            }
+
+            async function printSingleLabels() {
+                let n = document.getElementById("labelProductName").value.trim();
+                let b = document.getElementById("labelBarcode").value.trim();
+                let p = parseFloat(document.getElementById("labelPrice").value);
+                let copies = Math.min(parseInt(document.getElementById("labelCount").value) || 1, 30);
+                if (!n || !b) { showToast("Fill name & barcode", true); return; }
+                const items = Array(copies).fill({ name: n, barcode: b, price: p });
+                await printBatchHTML(items);
+            }
+
+            async function downloadSinglePDF() {
+                let n = document.getElementById("labelProductName").value.trim();
+                let b = document.getElementById("labelBarcode").value.trim();
+                let p = parseFloat(document.getElementById("labelPrice").value);
+                let copies = Math.min(parseInt(document.getElementById("labelCount").value) || 1, 30);
+                if (!n || !b) { showToast("Fill all fields", true); return; }
+                const items = Array(copies).fill({ name: n, barcode: b, price: p });
+                await generateBatchPDF(items, "single_label");
+            }
+
+            function resetLabelUI() {
+                document.getElementById("labelProductName").value = "";
+                document.getElementById("labelBarcode").value = "";
+                document.getElementById("labelPrice").value = "0.00";
+                document.getElementById("labelCount").value = "1";
+                document.getElementById("labelPreview").classList.add("hidden");
+            }
+
+            function prefillLabelFromItem(id) {
+                const it = stockItems.find(i => i.id === id);
+                if (it) {
+                    document.getElementById("labelProductName").value = it.name;
+                    document.getElementById("labelBarcode").value = it.barcode || "";
+                    document.getElementById("labelPrice").value = it.price || 0;
+                    document.querySelector('[data-tab="labels"]').click();
+                    renderSinglePreview();
+                    showToast("Loaded to label maker");
+                }
+            }
+
+            // ========== LOAD INITIAL DATA ==========
+            function loadInitial() {
+                loadCategories();
+                populateCategoryDropdowns();
+                const savedSettings = localStorage.getItem(SETTINGS_KEY + '_theme');
+                applyTheme(savedSettings || 'light');
+                const savedThreshold = localStorage.getItem(SETTINGS_KEY + '_threshold');
+                if (savedThreshold) { lowStockThreshold = parseInt(savedThreshold) || 5;
+                    document.getElementById('lowStockThreshold').value = lowStockThreshold; }
+                const savedHistory = localStorage.getItem(HISTORY_KEY);
+                if (savedHistory) { try { activityLog = JSON.parse(savedHistory); if (!Array.isArray(activityLog))
+                        activityLog = []; } catch (e) { activityLog = []; } }
+                renderHistoryFeed();
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try {
+                        let parsed = JSON.parse(saved);
+                        if (Array.isArray(parsed) && parsed.length) {
+                            stockItems = parsed.map(p => ({ ...p, quantity: p.quantity ?? 0, price: (p.price !==
+                                    undefined) ? p.price : null, category: p.category ||
+                                    'Uncategorized', supplier: p.supplier || null, notes: p.notes ||
+                                    null, createdAt: p.createdAt || new Date().toISOString(),
+                                updatedAt: p.updatedAt || new Date().toISOString() }));
+                            reorderNumbers();
+                            renderDataTable();
+                            loadCounting();
+                            updateAllStats();
+                            showToast(`Loaded ${stockItems.length} items`);
+                            return;
+                        }
+                    } catch (e) {}
+                }
+                const demo = [{ id: 1001, displayNumber: 1, name: "Organic Milk", barcode: "890123", quantity: 5, price: 3.49,
+                    expiryDate: "2025-06-15", category: "Dairy", supplier: "Local Farm", notes: "Keep refrigerated",
+                    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, { id: 1002,
+                    displayNumber: 2, name: "Sourdough", barcode: "400638", quantity: 0, price: 4.99, expiryDate: "2025-12-01",
+                    category: "Bakery", supplier: null, notes: null, createdAt: new Date().toISOString(), updatedAt: new Date()
+                        .toISOString() }, { id: 1003, displayNumber: 3, name: "Canned Beans", barcode: "376012", quantity: 24,
+                    price: 1.29, expiryDate: null, category: "Canned Goods", supplier: "Wholesale Co", notes: null,
+                    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }];
+                stockItems = demo;
+                reorderNumbers();
+                renderDataTable();
+                loadCounting();
+                updateAllStats();
+            }
+
+            // ========== TABS ==========
+            function initTabs() {
+                const btns = document.querySelectorAll(".tab-btn");
+                const panels = {
+                    dashboard: document.getElementById("dashboardPanel"),
+                    entry: document.getElementById("entryPanel"),
+                    data: document.getElementById("dataPanel"),
+                    analysis: document.getElementById("analysisPanel"),
+                    labels: document.getElementById("labelsPanel"),
+                    counting: document.getElementById("countingPanel")
+                };
+                btns.forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        const tabId = btn.getAttribute("data-tab");
+                        btns.forEach(b => b.classList.remove("active"));
+                        btn.classList.add("active");
+                        Object.values(panels).forEach(p => p.classList.remove("active-panel"));
+                        const panel = panels[tabId];
+                        if (panel) panel.classList.add("active-panel");
+                        if (tabId === "dashboard") renderDashboardStats();
+                        if (tabId === "data") renderDataTable();
+                        if (tabId === "analysis") renderAnalysisPanel();
+                        if (tabId === "labels") populateLabelNameList();
+                        if (tabId === "counting") populateCountNameList();
+                        if (tabId !== "entry") stopScanner();
+                    });
+                });
+            }
+
+            // ========== KEYBOARD SHORTCUTS ==========
+            function handleKeyboardShortcuts(e) {
+                if (e.ctrlKey && e.key === 's') { e.preventDefault();
+                    persist();
+                    showToast("Data saved 💾"); }
+                if (e.ctrlKey && e.key === 'f') { e.preventDefault();
+                    document.querySelector('[data-tab="data"]').click();
+                    setTimeout(() => document.getElementById('searchInputData').focus(), 150); }
+                if (e.ctrlKey && e.key === 'n') { e.preventDefault();
+                    document.querySelector('[data-tab="entry"]').click();
+                    resetForm();
+                    setTimeout(() => document.getElementById('productName').focus(), 150); }
+                if (e.ctrlKey && e.key === 'z') { e.preventDefault();
+                    undoLastAction(); }
+                if (e.key === 'Escape') { stopScanner();
+                    clearBulkSelection(); }
+            }
+
+            // ========== EVENT BINDINGS ==========
+            document.addEventListener("DOMContentLoaded", () => {
+                loadInitial();
+                initTabs();
+
+                document.getElementById("addUpdateBtn").addEventListener("click", addOrUpdateItem);
+                document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
+                document.getElementById("undoBtn").addEventListener("click", undoLastAction);
+                document.getElementById("deleteAllBtn").addEventListener("click", deleteAllItems);
+                document.getElementById("saveDataBtn").addEventListener("click", () => { persist();
+                    showToast("Manual save 💾"); });
+                document.getElementById("importExcelBtn").addEventListener("click", triggerImport);
+                document.getElementById("exportExcelBtn").addEventListener("click", exportExcelData);
+                document.getElementById("exportPdfBtn").addEventListener("click", exportPdfData);
+                document.getElementById("jsonBackupBtn").addEventListener("click", jsonBackup);
+                document.getElementById("jsonRestoreBtn").addEventListener("click", jsonRestore);
+                document.getElementById("refreshAnalysisBtn").addEventListener("click", renderAnalysisPanel);
+                document.getElementById("applyThresholdBtn").addEventListener("click", () => {
+                    const val = parseInt(document.getElementById("lowStockThreshold").value);
+                    if (!isNaN(val) && val >= 0) { lowStockThreshold = val;
+                        localStorage.setItem(SETTINGS_KEY + '_threshold', val);
+                        renderAnalysisPanel();
+                        renderDashboardStats();
+                        renderDataTable();
+                        showToast(`Threshold set to ${val}`); }
+                });
+                document.getElementById("themeToggleBtn").addEventListener("click", toggleTheme);
+                document.getElementById("floatAddBtn").addEventListener("click", () => { document.querySelector(
+                        '[data-tab="entry"]').click();
+                    resetForm();
+                    setTimeout(() => document.getElementById('productName').focus(), 150); });
+                document.getElementById("searchInputData").addEventListener("input", (e) => { currentSearch = e.target
+                        .value.toLowerCase();
+                    renderDataTable(); });
+                document.getElementById("sortBySelect").addEventListener("change", (e) => { currentSort = e.target
+                        .value;
+                    renderDataTable(); });
+                document.getElementById("categoryFilterSelect").addEventListener("change", (e) => {
+                    currentCategoryFilter = e.target.value;
+                    renderDataTable(); });
+                document.getElementById("showQtyColToggle").addEventListener("change", (e) => { showQtyCol = e.target
+                        .checked;
+                    renderDataTable(); });
+                document.getElementById("selectAllCheckbox").addEventListener("change", toggleSelectAll);
+                document.getElementById("bulkDeleteBtn").addEventListener("click", bulkDelete);
+                document.getElementById("bulkClearBtn").addEventListener("click", clearBulkSelection);
+                document.getElementById("productCategory").addEventListener("change", handleCategoryChange);
+
+                document.getElementById("tableBody").addEventListener("click", (e) => {
+                    const btn = e.target.closest("button");
+                    if (!btn) { if (e.target.closest('.row-checkbox')) { updateBulkBar(); return; }
+                    return; }
+                    const id = Number(btn.getAttribute("data-id"));
+                    if (isNaN(id)) return;
+                    if (btn.classList.contains("edit-btn")) startEdit(id);
+                    if (btn.classList.contains("delete-btn")) deleteItemById(id);
+                    if (btn.classList.contains("label-btn")) prefillLabelFromItem(id);
+                });
+                document.getElementById("tableBody").addEventListener("change", (e) => { if (e.target.closest(
+                        '.row-checkbox')) updateBulkBar(); });
+
+                document.getElementById("startScanBtn").addEventListener("click", startScanner);
+                document.getElementById("closeScannerBtn").addEventListener("click", stopScanner);
+
+                document.getElementById("generateLabelBtn").addEventListener("click", renderSinglePreview);
+                document.getElementById("printLabelBtn").addEventListener("click", printSingleLabels);
+                document.getElementById("downloadPdfLabelBtn").addEventListener("click", downloadSinglePDF);
+                document.getElementById("resetLabelBtn").addEventListener("click", resetLabelUI);
+                document.getElementById("labelProductName").addEventListener("input", syncLabelFieldsByName);
+                document.getElementById("batchPdfAllBtn").addEventListener("click", async () => {
+                    if (stockItems.length) await generateBatchPDF([...stockItems], "all_items");
+                    else showToast("No items", true);
+                });
+                document.getElementById("batchPrintAllBtn").addEventListener("click", async () => {
+                    if (stockItems.length) await printBatchHTML(stockItems);
+                    else showToast("No items", true);
+                });
+
+                document.getElementById("addCountBtn").addEventListener("click", addOrUpdateCountingItem);
+                document.getElementById("clearCountFormBtn").addEventListener("click", clearCountingForm);
+                document.getElementById("cleanQuantityBtn").addEventListener("click", cleanAllQuantities);
+                document.getElementById("deleteAllCountBtn").addEventListener("click", deleteAllCounting);
+                document.getElementById("exportCountExcelBtn").addEventListener("click", exportCountingExcel);
+                document.getElementById("exportCountPdfBtn").addEventListener("click", exportCountingPdf);
+                document.getElementById("countProductName").addEventListener("input", autoFillBarcodeForCounting);
+                document.getElementById("countingTableBody").addEventListener("click", (e) => {
+                    const btn = e.target.closest("button");
+                    if (!btn) return;
+                    const id = Number(btn.getAttribute("data-id"));
+                    if (isNaN(id)) return;
+                    if (btn.classList.contains("edit-count-btn")) editCountingItem(id);
+                    if (btn.classList.contains("delete-count-btn")) deleteCountingItem(id);
+                });
+
+                document.addEventListener("keydown", handleKeyboardShortcuts);
+                document.body.addEventListener("click", () => { if (audioCtx && audioCtx.state === "suspended")
+                        audioCtx.resume(); }, { once: true });
+                window.addEventListener("resize", () => { if (document.querySelector(
+                        '[data-tab="dashboard"].active-panel')) renderDashboardChart(); });
+
+                updateAllStats();
+                showToast("Ready 🚀");
+            });
+        })();
+    </script>
 </body>
 </html>
